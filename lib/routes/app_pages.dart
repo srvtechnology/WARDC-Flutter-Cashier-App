@@ -1,0 +1,29 @@
+// lib/routes/app_pages.dart
+
+import 'package:get/get.dart';
+import '../bindings/home_binding.dart';
+import '../bindings/onboarding_binding.dart';
+import '../views/home/home_view.dart';
+import '../views/onboarding/onboarding_view.dart';
+
+part 'app_routes.dart';
+
+class AppPages {
+  AppPages._();
+
+  static const initial = Routes.onboarding;
+
+  static final routes = [
+    GetPage(
+      name: Routes.onboarding,
+      page: () => const OnboardingView(),
+      binding: OnboardingBinding(),
+    ),
+    GetPage(
+      name: Routes.home,
+      page: () => const HomeView(),
+      binding: HomeBinding(),
+    ),
+  ];
+}
+
