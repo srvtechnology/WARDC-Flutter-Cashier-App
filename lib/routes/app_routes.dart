@@ -8,5 +8,7 @@ abstract class Routes {
 
   static const onboarding = '/onboarding';
   static const home = '/home';
+  static const assessmentDashboard = '/assessment-dashboard';
+  static const cashierDashboard = '/cashier-dashboard';
 }
 

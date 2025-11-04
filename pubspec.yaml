@@ -41,6 +41,15 @@ dependencies:
   # Native Splash Screen
   native_animated_splash: ^0.0.1+1
 
+  # Networking
+  dio: ^5.7.0
+
+  # Secure storage for tokens
+  flutter_secure_storage: ^9.2.2
+
+  # Lightweight key-value storage
+  shared_preferences: ^2.3.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

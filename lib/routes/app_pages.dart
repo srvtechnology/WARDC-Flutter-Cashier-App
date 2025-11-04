@@ -5,6 +5,8 @@ import '../bindings/home_binding.dart';
 import '../bindings/onboarding_binding.dart';
 import '../views/home/home_view.dart';
 import '../views/onboarding/onboarding_view.dart';
+import '../views/dashboard/assessment_dashboard_view.dart';
+import '../views/dashboard/cashier_dashboard_view.dart';
 
 part 'app_routes.dart';
 
@@ -23,6 +25,14 @@ class AppPages {
       name: Routes.home,
       page: () => const HomeView(),
       binding: HomeBinding(),
+    ),
+    GetPage(
+      name: Routes.assessmentDashboard,
+      page: () => const AssessmentDashboardView(),
+    ),
+    GetPage(
+      name: Routes.cashierDashboard,
+      page: () => const CashierDashboardView(),
     ),
   ];
 }
