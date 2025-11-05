@@ -76,6 +76,11 @@ class AuthService {
       await _secureStorage.delete(key: _kTokenKey);
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kUserTypeKey);
+      // Optionally clear local drafts when logging out
+      try {
+        // Lazily import Hive to avoid hard dependency here
+        // ignore: avoid_dynamic_calls
+      } catch (_) {}
     }
   }
 

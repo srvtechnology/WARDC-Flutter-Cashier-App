@@ -49,6 +49,13 @@ dependencies:
 
   # Lightweight key-value storage
   shared_preferences: ^2.3.3
+  
+  # Offline cache & media
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.4
+  image_picker: ^1.1.2
+  geolocator: ^12.0.0
 
 dev_dependencies:
   flutter_test:

@@ -10,5 +10,7 @@ abstract class Routes {
   static const home = '/home';
   static const assessmentDashboard = '/assessment-dashboard';
   static const cashierDashboard = '/cashier-dashboard';
+  static const propertyList = '/property-list';
+  static const propertyWizard = '/property-wizard';
 }
 

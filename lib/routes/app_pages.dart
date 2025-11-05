@@ -7,6 +7,8 @@ import '../views/home/home_view.dart';
 import '../views/onboarding/onboarding_view.dart';
 import '../views/dashboard/assessment_dashboard_view.dart';
 import '../views/dashboard/cashier_dashboard_view.dart';
+import '../views/property/property_list_view.dart';
+import '../views/property/property_wizard_view.dart';
 
 part 'app_routes.dart';
 
@@ -33,6 +35,14 @@ class AppPages {
     GetPage(
       name: Routes.cashierDashboard,
       page: () => const CashierDashboardView(),
+    ),
+    GetPage(
+      name: Routes.propertyList,
+      page: () => const PropertyListView(),
+    ),
+    GetPage(
+      name: Routes.propertyWizard,
+      page: () => const PropertyWizardView(),
     ),
   ];
 }
