@@ -53,10 +53,26 @@ class PropertyWizardView extends GetView<PropertyController> {
       }),
       floatingActionButton: Obx(() {
         final int step = controller.step.value;
-        return FloatingActionButton(
-          backgroundColor: Colors.green,
-          onPressed: step < 4 ? controller.nextStep : controller.submit,
-          child: Icon(step < 4 ? Icons.arrow_forward : Icons.check),
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (step > 0)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: FloatingActionButton(
+                  heroTag: 'backFab',
+                  backgroundColor: Colors.grey.shade600,
+                  onPressed: controller.prevStep,
+                  child: const Icon(Icons.arrow_back),
+                ),
+              ),
+            FloatingActionButton(
+              heroTag: 'nextFab',
+              backgroundColor: Colors.green,
+              onPressed: step < 4 ? controller.nextStep : controller.submit,
+              child: Icon(step < 4 ? Icons.arrow_forward : Icons.check),
+            ),
+          ],
         );
       }),
     );
@@ -156,6 +172,8 @@ class _StepForms extends StatelessWidget {
     focusedBorder: OutlineInputBorder(
       borderSide: BorderSide(color: Colors.green, width: 2),
     ),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
   );
 
   @override
@@ -163,241 +181,267 @@ class _StepForms extends StatelessWidget {
     if (step == 0) {
       return Form(
         key: controller.step1Key,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            DropdownButtonFormField<String>(
-              decoration: _decoration.copyWith(labelText: 'Is Organization'),
-              items: const [
-                DropdownMenuItem(value: '0', child: Text('No')),
-                DropdownMenuItem(value: '1', child: Text('Yes')),
-              ],
-              onChanged: (v) => controller.setField('is_organization', v),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: _decoration.copyWith(labelText: 'First Name*'),
-              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-              onChanged: (v) => controller.setField('landlord_first_name', v),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: _decoration.copyWith(labelText: 'Middle Name'),
-              onChanged: (v) => controller.setField('landlord_middle_name', v),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: _decoration.copyWith(labelText: 'Surname*'),
-              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
-              onChanged: (v) => controller.setField('landlord_surname', v),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: _decoration.copyWith(labelText: 'Email Address'),
-              keyboardType: TextInputType.emailAddress,
-              onChanged: (v) => controller.setField('landlord_email', v),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(labelText: 'Id Number'),
-                    onChanged: (v) =>
-                        controller.setField('landlord_id_number', v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(labelText: 'Id Type'),
-                    onChanged: (v) =>
-                        controller.setField('landlord_id_type', v),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: _decoration.copyWith(labelText: 'Title'),
-                    items: const [
-                      DropdownMenuItem(value: '1', child: Text('Mr.')),
-                      DropdownMenuItem(value: '2', child: Text('Ms.')),
+        child: Obx(() {
+          final bool org = controller.isOrganization.value == '1';
+          String? _req(String? v) =>
+              (v == null || v.toString().trim().isEmpty) ? 'Required' : null;
+          String? _email(String? v) {
+            if (v == null || v.trim().isEmpty) return null;
+            return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())
+                ? null
+                : 'Enter a valid email';
+          }
+
+          String? _phone(String? v) {
+            if (v == null || v.trim().isEmpty) return 'Required';
+            return RegExp(r'^\+?[0-9]{7,15}$').hasMatch(v.trim())
+                ? null
+                : 'Invalid number';
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text('Is Organization'),
+                  const SizedBox(width: 12),
+                  Row(
+                    children: [
+                      Radio<String>(
+                        value: '0',
+                        groupValue: controller.isOrganization.value,
+                        onChanged: (v) =>
+                            controller.setIsOrganization(v ?? '0'),
+                      ),
+                      const Text('No'),
+                      const SizedBox(width: 8),
+                      Radio<String>(
+                        value: '1',
+                        groupValue: controller.isOrganization.value,
+                        onChanged: (v) =>
+                            controller.setIsOrganization(v ?? '1'),
+                      ),
+                      const Text('Yes'),
                     ],
-                    onChanged: (v) =>
-                        controller.setField('landlord_ownerTitle_id', v),
                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (!org) ...[
+                TextFormField(
+                  decoration: _decoration.copyWith(labelText: 'First Name*'),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: _req,
+                  onChanged: (v) =>
+                      controller.setField('landlord_first_name', v),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: _decoration.copyWith(labelText: 'Sex'),
-                    items: const [
-                      DropdownMenuItem(value: 'm', child: Text('Male')),
-                      DropdownMenuItem(value: 'f', child: Text('Female')),
-                    ],
-                    onChanged: (v) => controller.setField('landlord_sex', v),
-                  ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  decoration: _decoration.copyWith(labelText: 'Middle Name'),
+                  onChanged: (v) =>
+                      controller.setField('landlord_middle_name', v),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: _decoration.copyWith(labelText: 'Mobile 1'),
-              onChanged: (v) => controller.setField('landlord_mobile_1', v),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              decoration: _decoration.copyWith(labelText: 'Mobile 2'),
-              onChanged: (v) => controller.setField('landlord_mobile_2', v),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              decoration: _decoration.copyWith(labelText: 'Category Type*'),
-              items: const [
-                DropdownMenuItem(value: 'R', child: Text('Residential')),
-                DropdownMenuItem(value: 'C', child: Text('Commercial')),
-              ],
-              validator: (v) => v == null ? 'Required' : null,
-              onChanged: (v) => controller.setField('categoryType', v),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(labelText: 'Street No'),
-                    onChanged: (v) =>
-                        controller.setField('landlord_street_number', v),
-                  ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  decoration: _decoration.copyWith(labelText: 'Surname*'),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: _req,
+                  onChanged: (v) => controller.setField('landlord_surname', v),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(labelText: 'Street Name'),
-                    onChanged: (v) =>
-                        controller.setField('landlord_street_name', v),
-                  ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  decoration: _decoration.copyWith(labelText: 'Gender'),
+                  items: const [
+                    DropdownMenuItem(value: 'm', child: Text('Male')),
+                    DropdownMenuItem(value: 'f', child: Text('Female')),
+                  ],
+                  isExpanded: true,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: _req,
+                  onChanged: (v) => controller.setField('landlord_sex', v),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _AdminSelect(
-                    controller: controller,
-                    dataKey: 'wards',
-                    payloadKey: 'landlord_ward',
-                    label: 'Ward',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _AdminSelect(
-                    controller: controller,
-                    dataKey: 'constituencies',
-                    payloadKey: 'landlord_constituency',
-                    label: 'Constituency',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _AdminSelect(
-                    controller: controller,
-                    dataKey: 'sections',
-                    payloadKey: 'landlord_section',
-                    label: 'Section',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _AdminSelect(
-                    controller: controller,
-                    dataKey: 'chiefdoms',
-                    payloadKey: 'landlord_chiefdom',
-                    label: 'Chiefdom',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _AdminSelect(
-                    controller: controller,
-                    dataKey: 'districts',
-                    payloadKey: 'landlord_district',
-                    label: 'District',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _AdminSelect(
-                    controller: controller,
-                    dataKey: 'provinces',
-                    payloadKey: 'landlord_province',
-                    label: 'Province',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(labelText: 'Postcode'),
-                    onChanged: (v) =>
-                        controller.setField('landlord_postcode', v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(
-                      labelText: 'Organization Name',
+                const SizedBox(height: 12),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        decoration: _decoration.copyWith(
+                          labelText: 'Organization Name',
+                        ),
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: _req,
+                        onChanged: (v) =>
+                            controller.setField('organization_name', v),
+                      ),
                     ),
-                    onChanged: (v) =>
-                        controller.setField('organization_name', v),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(
-                      labelText: 'Organization Type',
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        decoration: _decoration.copyWith(
+                          labelText: 'Organization Address',
+                        ),
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: _req,
+                        onChanged: (v) =>
+                            controller.setField('organization_addresss', v),
+                      ),
                     ),
-                    onChanged: (v) =>
-                        controller.setField('organization_type', v),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    decoration: _decoration.copyWith(
-                      labelText: 'Organization Address',
-                    ),
-                    onChanged: (v) =>
-                        controller.setField('organization_addresss', v),
+                const SizedBox(height: 12),
+                TextFormField(
+                  decoration: _decoration.copyWith(
+                    labelText: 'Organization Type',
                   ),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: _req,
+                  onChanged: (v) => controller.setField('organization_type', v),
                 ),
+                const SizedBox(height: 12),
               ],
-            ),
-          ],
-        ),
+              TextFormField(
+                decoration: _decoration.copyWith(labelText: 'Email Address'),
+                keyboardType: TextInputType.emailAddress,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: _email,
+                onChanged: (v) => controller.setField('landlord_email', v),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      decoration: _decoration.copyWith(labelText: 'Street No'),
+                      onChanged: (v) =>
+                          controller.setField('landlord_street_number', v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      decoration: _decoration.copyWith(
+                        labelText: 'Street Name',
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('landlord_street_name', v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AdminSelect(
+                      controller: controller,
+                      dataKey: 'wards',
+                      payloadKey: 'landlord_ward',
+                      label: 'Ward',
+                      requiredField: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AdminSelect(
+                      controller: controller,
+                      dataKey: 'constituencies',
+                      payloadKey: 'landlord_constituency',
+                      label: 'Constituency',
+                      requiredField: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AdminSelect(
+                      controller: controller,
+                      dataKey: 'sections',
+                      payloadKey: 'landlord_section',
+                      label: 'Section',
+                      requiredField: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AdminSelect(
+                      controller: controller,
+                      dataKey: 'chiefdoms',
+                      payloadKey: 'landlord_chiefdom',
+                      label: 'Chiefdom',
+                      requiredField: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AdminSelect(
+                      controller: controller,
+                      dataKey: 'districts',
+                      payloadKey: 'landlord_district',
+                      label: 'District',
+                      requiredField: true,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AdminSelect(
+                      controller: controller,
+                      dataKey: 'provinces',
+                      payloadKey: 'landlord_province',
+                      label: 'Province',
+                      requiredField: true,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      decoration: _decoration.copyWith(labelText: 'Postcode'),
+                      onChanged: (v) =>
+                          controller.setField('landlord_postcode', v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      decoration: _decoration.copyWith(labelText: 'Mobile 1'),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: _phone,
+                      onChanged: (v) =>
+                          controller.setField('landlord_mobile_1', v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                decoration: _decoration.copyWith(labelText: 'Mobile 2'),
+                onChanged: (v) => controller.setField('landlord_mobile_2', v),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                decoration: _decoration.copyWith(labelText: 'Category Type*'),
+                items: const [
+                  DropdownMenuItem(value: 'R', child: Text('Residential')),
+                  DropdownMenuItem(value: 'C', child: Text('Commercial')),
+                ],
+                validator: (v) => v == null ? 'Required' : null,
+                onChanged: (v) => controller.setField('categoryType', v),
+              ),
+            ],
+          );
+        }),
       );
     }
     if (step == 1) {
@@ -1342,29 +1386,67 @@ class _AdminSelect extends StatelessWidget {
     required this.dataKey,
     required this.payloadKey,
     required this.label,
+    this.requiredField = false,
   });
   final PropertyController controller;
   final String dataKey;
   final String payloadKey;
   final String label;
+  final bool requiredField;
 
   List<Map<String, dynamic>> get _options {
     final dynamic vars = controller.cachedVariables;
-    if (vars is Map &&
-        vars['data'] is Map &&
-        (vars['data'] as Map)[dataKey] is List) {
-      return List<Map<String, dynamic>>.from(
-        (vars['data'] as Map)[dataKey] as List,
-      );
+    if (vars == null) return const <Map<String, dynamic>>[];
+    // Expect a map wrapper {'fetchedAt': ..., 'data': {...}}
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+
+    // Map plural keys used in UI to singular API keys
+    final Map<String, String> apiKeyMap = <String, String>{
+      'wards': 'ward',
+      'constituencies': 'constituency',
+      'sections': 'section',
+      'chiefdoms': 'chiefdom',
+      'districts': 'district',
+      'provinces': 'province',
+    };
+
+    final String apiKey = apiKeyMap[dataKey] ?? dataKey;
+    final dynamic raw = data[apiKey];
+
+    // Handle List format (for other fields like property_categories)
+    if (raw is List) {
+      return List<Map<String, dynamic>>.from(raw);
     }
+
+    // Handle Map format (for admin fields: ward, constituency, section, chiefdom, district, province)
+    if (raw is Map) {
+      final Map<String, dynamic> m = Map<String, dynamic>.from(raw);
+      return m.entries
+          .map<Map<String, dynamic>>(
+            (e) => <String, dynamic>{
+              'id': e.key.toString(),
+              'label': e.value.toString(),
+            },
+          )
+          .toList();
+    }
+
     return const <Map<String, dynamic>>[];
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> opts = _options;
-    if (opts.isEmpty) {
-      return TextFormField(
+    // Rebuild when variables are loaded/refreshed
+    return Obx(() {
+      final int _ = controller.variablesTick.value; // dependency only
+      final List<Map<String, dynamic>> opts = _options;
+
+      // Always show dropdown, even if empty (will be disabled)
+      return DropdownButtonFormField<String>(
         decoration: const InputDecoration(
           border: OutlineInputBorder(
             borderSide: BorderSide(color: Colors.green),
@@ -1375,29 +1457,46 @@ class _AdminSelect extends StatelessWidget {
           focusedBorder: OutlineInputBorder(
             borderSide: BorderSide(color: Colors.green, width: 2),
           ),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         ).copyWith(labelText: label),
-        onChanged: (v) => controller.setField(payloadKey, v),
+        isExpanded: true,
+        value: opts.isEmpty ? null : null, // No pre-selection
+        hint: opts.isEmpty
+            ? const Text('Loading...', style: TextStyle(color: Colors.grey))
+            : null,
+        selectedItemBuilder: opts.isEmpty
+            ? null
+            : (context) => [
+                for (final Map<String, dynamic> o in opts)
+                  Text(
+                    o['label']?.toString() ?? 'Item',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+        items: opts.isEmpty
+            ? [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  enabled: false,
+                  child: Text('Loading options...'),
+                ),
+              ]
+            : [
+                for (final Map<String, dynamic> o in opts)
+                  DropdownMenuItem<String>(
+                    value: (o['id'] ?? o['value']).toString(),
+                    child: Text(o['label']?.toString() ?? 'Item'),
+                  ),
+              ],
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        validator: (v) =>
+            requiredField && (v == null || v.isEmpty) ? 'Required' : null,
+        onChanged: opts.isEmpty
+            ? null
+            : (v) => controller.setField(payloadKey, v),
       );
-    }
-    return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green, width: 2),
-        ),
-      ).copyWith(labelText: label),
-      items: [
-        for (final Map<String, dynamic> o in opts)
-          DropdownMenuItem<String>(
-            value: (o['id'] ?? o['value']).toString(),
-            child: Text(o['label']?.toString() ?? 'Item'),
-          ),
-      ],
-      onChanged: (v) => controller.setField(payloadKey, v),
-    );
+    });
   }
 }
 

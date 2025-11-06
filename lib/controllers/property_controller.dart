@@ -21,22 +21,29 @@ class PropertyController extends GetxController {
   final RxList<String> assessmentPhotos = <String>[].obs;
 
   final RxBool isSubmitting = false.obs;
-  final String draftId = DateTime.now().millisecondsSinceEpoch.toString();
+  // Tracks whether the landlord is an organization ('1') or an individual ('0')
+  final RxString isOrganization = '0'.obs;
+  // Used to notify the UI when cached variables change
+  final RxInt variablesTick = 0.obs;
 
-  Box<dynamic>? _drafts;
   Box<dynamic>? _variables;
 
   @override
   Future<void> onInit() async {
     await Hive.initFlutter();
-    _drafts = await Hive.openBox<dynamic>(HiveBoxes.propertyDrafts);
     _variables = await Hive.openBox<dynamic>(HiveBoxes.variablesCache);
-    payload['randomdata'] = draftId;
+    payload['randomdata'] = DateTime.now().millisecondsSinceEpoch.toString();
+    // Default to non-organization
+    payload['is_organization'] = '0';
     await _maybeRefreshVariables();
     super.onInit();
   }
 
-  Map<String, dynamic>? get cachedVariables => _variables?.get('all');
+  Map<String, dynamic>? get cachedVariables {
+    final dynamic raw = _variables?.get('all');
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
+  }
 
   Future<void> refreshVariables() async {
     try {
@@ -46,6 +53,8 @@ class PropertyController extends GetxController {
         'fetchedAt': DateTime.now().millisecondsSinceEpoch,
         'data': resp,
       });
+      // Notify listeners that variables have changed
+      variablesTick.value++;
     } catch (e) {
       // Network error; keep using cached values if any
       Get.log('Variables fetch failed: $e');
@@ -53,18 +62,26 @@ class PropertyController extends GetxController {
   }
 
   Future<void> _maybeRefreshVariables() async {
+    final dynamic raw = _variables?.get('all');
     final Map<String, dynamic>? cached =
-        _variables?.get('all') as Map<String, dynamic>?;
+        raw is Map ? Map<String, dynamic>.from(raw) : null;
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int ttlMs = 1000 * 60 * 60; // 1 hour
     if (cached == null || (now - (cached['fetchedAt'] as int? ?? 0)) > ttlMs) {
       await refreshVariables();
+    } else {
+      // Trigger one tick so dependent widgets can read existing cache
+      variablesTick.value++;
     }
   }
 
   void setField(String key, dynamic value) {
     payload[key] = value;
-    _autosave();
+  }
+
+  void setIsOrganization(String value) {
+    isOrganization.value = value;
+    payload['is_organization'] = value;
   }
 
   void addRegistryItem(int index, {String? meterNumber, String? imagePath}) {
@@ -74,20 +91,17 @@ class PropertyController extends GetxController {
     if (meterNumber != null) current['meter_number'] = meterNumber;
     if (imagePath != null) current['meter_image'] = imagePath;
     registry['$index'] = current;
-    _autosave();
   }
 
   void addAssessmentPhoto(String path) {
     if (path.isNotEmpty && File(path).existsSync()) {
       assessmentPhotos.add(path);
-      _autosave();
     }
   }
 
   void removeAssessmentPhoto(int idx) {
     if (idx >= 0 && idx < assessmentPhotos.length) {
       assessmentPhotos.removeAt(idx);
-      _autosave();
     }
   }
 
@@ -96,11 +110,15 @@ class PropertyController extends GetxController {
     if (step.value == 0) {
       _printLandlordPayload();
     }
-    if (step.value < 4) step.value += 1;
+    if (step.value < 4) {
+      step.value += 1;
+    }
   }
 
   void prevStep() {
-    if (step.value > 0) step.value -= 1;
+    if (step.value > 0) {
+      step.value -= 1;
+    }
   }
 
   bool _validateCurrent() {
@@ -129,46 +147,12 @@ class PropertyController extends GetxController {
         registryItems: registry,
         assessmentImagePaths: assessmentPhotos,
       );
-      // On success remove draft
-      await _drafts?.delete(draftId);
       Get.snackbar('Success', 'Property saved successfully');
     } catch (e) {
       Get.snackbar('Failed', e.toString());
-      await _queueForSync(lastError: e.toString());
     } finally {
       isSubmitting.value = false;
     }
-  }
-
-  Future<void> _queueForSync({String? lastError}) async {
-    final Map<String, dynamic> item = <String, dynamic>{
-      PropertyDraftKeys.id: draftId,
-      PropertyDraftKeys.createdAt: DateTime.now().toIso8601String(),
-      PropertyDraftKeys.updatedAt: DateTime.now().toIso8601String(),
-      PropertyDraftKeys.payload: payload,
-      PropertyDraftKeys.files: <String, dynamic>{
-        'registry': registry,
-        'assessmentPhotos': assessmentPhotos,
-      },
-      PropertyDraftKeys.status: PropertyDraftStatus.queued,
-      PropertyDraftKeys.lastError: lastError,
-    };
-    await _drafts?.put(draftId, item);
-  }
-
-  Future<void> _autosave() async {
-    final Map<String, dynamic> draft = <String, dynamic>{
-      PropertyDraftKeys.id: draftId,
-      PropertyDraftKeys.createdAt: DateTime.now().toIso8601String(),
-      PropertyDraftKeys.updatedAt: DateTime.now().toIso8601String(),
-      PropertyDraftKeys.payload: payload,
-      PropertyDraftKeys.files: <String, dynamic>{
-        'registry': registry,
-        'assessmentPhotos': assessmentPhotos,
-      },
-      PropertyDraftKeys.status: PropertyDraftStatus.draft,
-    };
-    await _drafts?.put(draftId, draft);
   }
 
   void _printLandlordPayload() {

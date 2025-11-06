@@ -20,10 +20,14 @@ class PropertyService {
 
   Future<Map<String, dynamic>> getAllVariables() async {
     try {
-      final dio.Response<dynamic> res = await _dio.post(
-        '/get-all-variable-datas',
-      );
-      return _cast(res.data);
+      // The endpoint returns a wrapper {status, message, data: {...}}.
+      // We normalize it here to return only the inner "data" map so that
+      // UI consumers can directly read keys like 'property_categories',
+      // 'ward', 'constituency', etc.
+      final dio.Response<dynamic> res = await _dio.get('/get-all-variable-datas');
+      final Map<String, dynamic> body = _cast(res.data);
+      final Map<String, dynamic> inner = _cast(body['data']);
+      return inner;
     } on dio.DioException catch (e) {
       throw AuthException(_mapDioError(e));
     }
