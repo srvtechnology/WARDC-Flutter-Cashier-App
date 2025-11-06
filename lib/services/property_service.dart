@@ -24,7 +24,9 @@ class PropertyService {
       // We normalize it here to return only the inner "data" map so that
       // UI consumers can directly read keys like 'property_categories',
       // 'ward', 'constituency', etc.
-      final dio.Response<dynamic> res = await _dio.get('/get-all-variable-datas');
+      final dio.Response<dynamic> res = await _dio.get(
+        '/get-all-variable-datas',
+      );
       final Map<String, dynamic> body = _cast(res.data);
       final Map<String, dynamic> inner = _cast(body['data']);
       return inner;
