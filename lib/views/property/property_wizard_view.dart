@@ -217,6 +217,31 @@ class _StepForms extends StatelessWidget {
 
   String? _val(String key) => controller.payload[key] as String?;
 
+  Future<void> _fetchLocationForPoint(int pointNumber) async {
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        return;
+      }
+      final Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
+      final String latLng = '${pos.latitude},${pos.longitude}';
+      controller.setField('registry_point$pointNumber', latLng);
+    } catch (e) {
+      // Handle error silently or show a message
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (step == 0) {
@@ -763,7 +788,7 @@ class _StepForms extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionCard(
-              title: 'Occupancy Type',
+              title: 'Select Constituencies',
               children: [_OccupancyTypeChips(controller: controller)],
             ),
             const SizedBox(height: 16),
@@ -868,91 +893,182 @@ class _StepForms extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
-              title: 'Location',
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          final bool serviceEnabled =
-                              await Geolocator.isLocationServiceEnabled();
-                          if (!serviceEnabled) {
-                            await Geolocator.openLocationSettings();
-                            return;
-                          }
-                          LocationPermission permission =
-                              await Geolocator.checkPermission();
-                          if (permission == LocationPermission.denied) {
-                            permission = await Geolocator.requestPermission();
-                          }
-                          if (permission == LocationPermission.deniedForever ||
-                              permission == LocationPermission.denied) {
-                            return;
-                          }
-                          final Position pos =
-                              await Geolocator.getCurrentPosition(
-                                desiredAccuracy: LocationAccuracy.best,
-                              );
-                          final String latLng =
-                              '${pos.latitude},${pos.longitude}';
-                          controller.setField('dor_lat_long', latLng);
-                          controller.setField('registry_point1', latLng);
-                        },
-                        child: const Text('Update Location'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('registry_digital_address'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Digital Address',
-                        ),
-                        onChanged: (v) =>
-                            controller.setField('registry_digital_address', v),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            _LocationSection(controller: controller),
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Registry Points',
               children: [
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: 8,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 4,
-                  ),
-                  itemBuilder: (context, index) {
-                    final int p = index + 1;
-                    return TextFormField(
-                      initialValue: _val('registry_point$p'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'Registry Point $p',
-                      ),
-                      onChanged: (v) =>
-                          controller.setField('registry_point$p', v),
-                    );
-                  },
-                ),
+                Obx(() {
+                  // Read each point directly from the RxMap so Obx can track dependencies
+                  final List<String?> points = List<String?>.generate(
+                    8,
+                    (int i) =>
+                        controller.payload['registry_point${i + 1}'] as String?,
+                  );
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: 8,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          childAspectRatio: 4,
+                        ),
+                    itemBuilder: (context, index) {
+                      final int p = index + 1;
+                      final String? pointValue = points[index];
+                      return TextFormField(
+                        key: ValueKey('point_${p}_$pointValue'),
+                        initialValue: pointValue,
+                        decoration: _decoration.copyWith(
+                          labelText: 'Point $p',
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.my_location, size: 20),
+                            tooltip: 'Use current location',
+                            onPressed: () => _fetchLocationForPoint(p),
+                          ),
+                        ),
+                        onChanged: (v) =>
+                            controller.setField('registry_point$p', v),
+                      );
+                    },
+                  );
+                }),
               ],
             ),
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Meters',
               children: [
-                _MeterRow(controller: controller, meterIndex: 0),
-                const SizedBox(height: 12),
-                _MeterRow(controller: controller, meterIndex: 1),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      controller.addEmptyRegistryItem();
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('+ Add Meter'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Obx(() {
+                  final List<int> indices =
+                      controller.registry.keys
+                          .map((k) => int.tryParse(k) ?? 0)
+                          .toList()
+                        ..sort();
+                  return Column(
+                    children: [
+                      for (final int idx in indices)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.25),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Meter ${idx + 1}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.red,
+                                      ),
+                                      onPressed: () =>
+                                          controller.removeRegistryItem(idx),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                TextFormField(
+                                  initialValue: controller
+                                      .registry['$idx']?['meter_number'],
+                                  decoration: const InputDecoration(
+                                    border: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: Colors.green,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 12,
+                                    ),
+                                    labelText: 'Meter Number',
+                                  ),
+                                  onChanged: (v) => controller.addRegistryItem(
+                                    idx,
+                                    meterNumber: v,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _ImageInputBox(
+                                  label: 'Meter Image',
+                                  path: controller
+                                      .registry['$idx']?['meter_image'],
+                                  onPick: () async {
+                                    final ImagePicker picker = ImagePicker();
+                                    final XFile? photo = await picker.pickImage(
+                                      source: ImageSource.camera,
+                                      imageQuality: 75,
+                                    );
+                                    if (photo != null) {
+                                      controller.addRegistryItem(
+                                        idx,
+                                        imagePath: photo.path,
+                                      );
+                                    }
+                                  },
+                                  onRemove: () => controller.addRegistryItem(
+                                    idx,
+                                    imagePath: '',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                }),
               ],
             ),
           ],
@@ -1436,6 +1552,119 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
+class _LocationSection extends StatefulWidget {
+  const _LocationSection({required this.controller});
+  final PropertyController controller;
+
+  @override
+  State<_LocationSection> createState() => _LocationSectionState();
+}
+
+class _LocationSectionState extends State<_LocationSection> {
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        setState(() => _isLoading = false);
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        setState(() => _isLoading = false);
+        return;
+      }
+      final Position pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
+      final String latLng = '${pos.latitude},${pos.longitude}';
+      widget.controller.setField('dor_lat_long', latLng);
+      widget.controller.setField('registry_point1', latLng);
+    } catch (e) {
+      // Handle error silently or show a message
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      // Get current values from payload
+      final String? latLong =
+          widget.controller.payload['dor_lat_long'] as String?;
+      final String? digitalAddress =
+          widget.controller.payload['registry_digital_address'] as String?;
+
+      return _SectionCard(
+        title: 'Location',
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey('latlong_$latLong'),
+                  initialValue: latLong,
+                  decoration: _decoration.copyWith(
+                    labelText: 'Dor Lat Long',
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.my_location),
+                      tooltip: 'Use current location',
+                      onPressed: _isLoading ? null : _fetchLocation,
+                    ),
+                  ),
+                  readOnly: true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey('digital_$digitalAddress'),
+                  initialValue: digitalAddress,
+                  decoration: _decoration.copyWith(
+                    labelText: 'Digital Address',
+                  ),
+                  onChanged: (v) {
+                    widget.controller.setField('registry_digital_address', v);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    });
+  }
+
+  InputDecoration get _decoration => const InputDecoration(
+    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green, width: 2),
+    ),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  );
+}
+
 class _MeterRow extends StatefulWidget {
   const _MeterRow({required this.controller, required this.meterIndex});
   final PropertyController controller;
@@ -1569,10 +1798,25 @@ class _OccupancyTypeChips extends StatefulWidget {
 
 class _OccupancyTypeChipsState extends State<_OccupancyTypeChips> {
   final Set<String> _selected = <String>{};
-  static const List<String> _types = <String>['Owned Tenancy', 'Rented House'];
+  static const List<String> _types = <String>[
+    'Owned Tenancy',
+    'Unoccupied House',
+    'Rented House',
+  ];
 
   void _commit() {
     widget.controller.setField('occupancy_type', _selected.toList());
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final dynamic existing = widget.controller.payload['occupancy_type'];
+    if (existing is List) {
+      for (final dynamic v in existing) {
+        if (v is String) _selected.add(v);
+      }
+    }
   }
 
   @override

@@ -93,6 +93,16 @@ class PropertyController extends GetxController {
     registry['$index'] = current;
   }
 
+  int addEmptyRegistryItem() {
+    final int idx = registry.length;
+    registry['$idx'] = <String, String>{};
+    return idx;
+  }
+
+  void removeRegistryItem(int index) {
+    registry.remove('$index');
+  }
+
   void addAssessmentPhoto(String path) {
     if (path.isNotEmpty && File(path).existsSync()) {
       assessmentPhotos.add(path);
