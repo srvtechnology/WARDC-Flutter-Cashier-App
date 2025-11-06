@@ -429,16 +429,7 @@ class _StepForms extends StatelessWidget {
                 decoration: _decoration.copyWith(labelText: 'Mobile 2'),
                 onChanged: (v) => controller.setField('landlord_mobile_2', v),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                decoration: _decoration.copyWith(labelText: 'Category Type*'),
-                items: const [
-                  DropdownMenuItem(value: 'R', child: Text('Residential')),
-                  DropdownMenuItem(value: 'C', child: Text('Commercial')),
-                ],
-                validator: (v) => v == null ? 'Required' : null,
-                onChanged: (v) => controller.setField('categoryType', v),
-              ),
+              // Category Type removed from Landlord step
             ],
           );
         }),
