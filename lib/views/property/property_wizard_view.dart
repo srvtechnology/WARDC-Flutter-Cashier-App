@@ -888,12 +888,35 @@ class _StepForms extends StatelessWidget {
       );
     }
     if (step == 3) {
+      // Validation function for step 4
+      String? _validateLatLong(String? v) {
+        if (v == null || v.trim().isEmpty) return 'Required';
+        final String trimmed = v.trim();
+        // Expected format: "lat,long" (e.g., "8.237550256892234,-13.085966873914003")
+        final List<String> parts = trimmed.split(',');
+        if (parts.length != 2) {
+          return 'Format: lat,long';
+        }
+        final double? lat = double.tryParse(parts[0].trim());
+        final double? lng = double.tryParse(parts[1].trim());
+        if (lat == null || lng == null) {
+          return 'Invalid coordinates';
+        }
+        if (lat < -90 || lat > 90) return 'Latitude must be -90 to 90';
+        if (lng < -180 || lng > 180) return 'Longitude must be -180 to 180';
+        return null;
+      }
+
       return Form(
         key: controller.step4Key,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _LocationSection(controller: controller),
+            _LocationSection(
+              key: const ValueKey('location_section'),
+              controller: controller,
+            ),
             const SizedBox(height: 16),
             _SectionCard(
               title: 'Registry Points',
@@ -930,6 +953,8 @@ class _StepForms extends StatelessWidget {
                             onPressed: () => _fetchLocationForPoint(p),
                           ),
                         ),
+                        keyboardType: TextInputType.text,
+                        validator: _validateLatLong,
                         onChanged: (v) =>
                             controller.setField('registry_point$p', v),
                       );
@@ -1007,38 +1032,52 @@ class _StepForms extends StatelessWidget {
                                   ],
                                 ),
                                 const SizedBox(height: 8),
-                                TextFormField(
-                                  initialValue: controller
-                                      .registry['$idx']?['meter_number'],
-                                  decoration: const InputDecoration(
-                                    border: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Colors.green,
+                                Obx(() {
+                                  final String? meterImage = controller
+                                      .registry['$idx']?['meter_image'];
+                                  final bool hasImage =
+                                      meterImage != null &&
+                                      meterImage.isNotEmpty;
+                                  return TextFormField(
+                                    initialValue: controller
+                                        .registry['$idx']?['meter_number'],
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.green,
+                                        ),
                                       ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Colors.green,
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.green,
+                                        ),
                                       ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(
-                                        color: Colors.green,
-                                        width: 2,
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Colors.green,
+                                          width: 2,
+                                        ),
                                       ),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 12,
+                                      ),
+                                      labelText: 'Meter Number',
                                     ),
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 12,
-                                    ),
-                                    labelText: 'Meter Number',
-                                  ),
-                                  onChanged: (v) => controller.addRegistryItem(
-                                    idx,
-                                    meterNumber: v,
-                                  ),
-                                ),
+                                    keyboardType: TextInputType.text,
+                                    validator: (v) {
+                                      // Required if meter image is present
+                                      if (hasImage &&
+                                          (v == null || v.trim().isEmpty)) {
+                                        return 'Required when image is present';
+                                      }
+                                      return null;
+                                    },
+                                    onChanged: (v) => controller
+                                        .addRegistryItem(idx, meterNumber: v),
+                                  );
+                                }),
                                 const SizedBox(height: 12),
                                 _ImageInputBox(
                                   label: 'Meter Image',
@@ -1075,340 +1114,373 @@ class _StepForms extends StatelessWidget {
         ),
       );
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionCard(
-          title: 'Property Images',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _DashedPicker(
-                    label: 'Property Image 1',
-                    onPick: () async {
-                      final ImagePicker picker = ImagePicker();
-                      final XFile? photo = await picker.pickImage(
-                        source: ImageSource.camera,
-                        imageQuality: 75,
-                      );
-                      if (photo != null)
-                        controller.addAssessmentPhoto(photo.path);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _DashedPicker(
-                    label: 'Property Image 2',
-                    onPick: () async {
-                      final ImagePicker picker = ImagePicker();
-                      final XFile? photo = await picker.pickImage(
-                        source: ImageSource.camera,
-                        imageQuality: 75,
-                      );
-                      if (photo != null)
-                        controller.addAssessmentPhoto(photo.path);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            if (photosSnapshot.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+    return Form(
+      key: controller.step5Key,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Multi-select fields at the top
+          _SectionCard(
+            title: 'Classification',
+            children: [
+              _MultiSelectVariablesChips(
+                controller: controller,
+                dataKey: 'property_categories',
+                payloadKey: 'assessment_categories_id',
+                label: 'Select Category',
+              ),
+              const SizedBox(height: 16),
+              _MultiSelectVariablesChips(
+                controller: controller,
+                dataKey: 'property_types',
+                payloadKey: 'property_types',
+                label: 'Select Types',
+              ),
+              const SizedBox(height: 16),
+              _MultiSelectVariablesChips(
+                controller: controller,
+                dataKey: 'property_value_added',
+                payloadKey: 'assessment_value_added_id',
+                label: 'Select property value added',
+              ),
+              const SizedBox(height: 16),
+              _CouncilAdjustmentsChips(controller: controller),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Materials section - single section with both fields
+          _SectionCard(
+            title: 'Materials',
+            children: [
+              Row(
                 children: [
-                  for (int i = 0; i < photosSnapshot.length; i++)
-                    Stack(
-                      alignment: Alignment.topRight,
-                      children: [
-                        Image.file(
-                          File(photosSnapshot[i]),
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                        ),
-                        IconButton(
-                          icon: const Icon(
-                            Icons.close,
-                            size: 18,
-                            color: Colors.red,
-                          ),
-                          onPressed: () => controller.removeAssessmentPhoto(i),
-                        ),
-                      ],
+                  Expanded(
+                    child: _SingleSelectVariablesDropdown(
+                      controller: controller,
+                      dataKey: 'property_wall_materials',
+                      payloadKey: 'assessment_wall_materials_id',
+                      label: 'Wall Material',
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SingleSelectVariablesDropdown(
+                      controller: controller,
+                      dataKey: 'property_roofs_materials',
+                      payloadKey: 'assessment_roofs_materials_id',
+                      label: 'Roof Material',
+                    ),
+                  ),
                 ],
               ),
             ],
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          title: 'Classification',
-          children: [
-            _MultiSelectVariablesChips(
-              controller: controller,
-              dataKey: 'property_categories',
-              payloadKey: 'assessment_categories_id',
-              label: 'Select Category',
-            ),
-            const SizedBox(height: 12),
-            _MultiSelectVariablesChips(
-              controller: controller,
-              dataKey: 'property_types',
-              payloadKey: 'property_types',
-              label: 'Select Types',
-            ),
-            const SizedBox(height: 12),
-            _MultiSelectVariablesChips(
-              controller: controller,
-              dataKey: 'property_value_added',
-              payloadKey: 'assessment_value_added_id',
-              label: 'Select value added',
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          title: 'Materials',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _SingleSelectVariablesDropdown(
-                    controller: controller,
-                    dataKey: 'property_wall_materials',
-                    payloadKey: 'assessment_wall_materials_id',
-                    label: 'Wall Material',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SingleSelectVariablesDropdown(
-                    controller: controller,
-                    dataKey: 'property_roofs_materials',
-                    payloadKey: 'assessment_roofs_materials_id',
-                    label: 'Roof Material',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _SingleSelectVariablesDropdown(
-              controller: controller,
-              dataKey: 'property_window_types',
-              payloadKey: 'assessment_window_type_id',
-              label: 'Window Type',
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          title: 'Dimensions',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('assessment_length'),
-                    decoration: _decoration.copyWith(labelText: 'Length'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) =>
-                        controller.setField('assessment_length', v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('assessment_breadth'),
-                    decoration: _decoration.copyWith(labelText: 'Breadth'),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) =>
-                        controller.setField('assessment_breadth', v),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          title: 'Property Details',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _SingleSelectVariablesDropdown(
-                    controller: controller,
-                    dataKey: 'property_uses',
-                    payloadKey: 'assessment_use_id',
-                    label: 'Property use',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SingleSelectVariablesDropdown(
-                    controller: controller,
-                    dataKey: 'property_zones',
-                    payloadKey: 'assessment_zone_id',
-                    label: 'Property zone',
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _SingleSelectVariablesDropdown(
-                    controller: controller,
-                    dataKey: 'swimmings',
-                    payloadKey: 'swimming_pool',
-                    label: 'Swimming pool',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    decoration: _decoration.copyWith(
-                      labelText: 'Gated community',
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: '0', child: Text('No')),
-                      DropdownMenuItem(value: '1', child: Text('Yes')),
-                    ],
-                    onChanged: (v) => controller.setField('gated_community', v),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          title: 'Additional Information',
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('total_shops'),
-                    decoration: _decoration.copyWith(
-                      labelText: 'No of Shops (optional)',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => controller.setField('total_shops', v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('total_mast'),
-                    decoration: _decoration.copyWith(
-                      labelText: 'No of Masts (optional)',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) => controller.setField('total_mast', v),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('total_compound_house'),
-                    decoration: _decoration.copyWith(
-                      labelText: 'No of Compound House',
-                    ),
-                    keyboardType: TextInputType.number,
-                    onChanged: (v) =>
-                        controller.setField('total_compound_house', v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('compound_name'),
-                    decoration: _decoration.copyWith(
-                      labelText: 'Compound Name',
-                    ),
-                    onChanged: (v) => controller.setField('compound_name', v),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('randomdata'),
-                    decoration: _decoration.copyWith(labelText: 'Random Data'),
-                    onChanged: (v) => controller.setField('randomdata', v),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    initialValue: _val('group_name'),
-                    decoration: _decoration.copyWith(labelText: 'Group Name'),
-                    onChanged: (v) => controller.setField('group_name', v),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _SectionCard(
-          title: 'Council Adjustments',
-          children: [_CouncilAdjustmentsChips(controller: controller)],
-        ),
-        const SizedBox(height: 16),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.visibility),
-            label: const Text('Preview Payload'),
-            onPressed: () {
-              final Map<String, dynamic> preview = <String, dynamic>{
-                ...controller.payload,
-                'registry': controller.registry,
-                'assessmentPhotos': controller.assessmentPhotos,
-              };
-              final String formatted = const JsonEncoder.withIndent(
-                '  ',
-              ).convert(preview);
-              showDialog<void>(
-                context: context,
-                builder: (BuildContext ctx) => AlertDialog(
-                  title: const Text('Final Payload Preview'),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: SingleChildScrollView(
-                      child: Text(
-                        formatted,
-                        style: const TextStyle(fontSize: 12),
+          ),
+          const SizedBox(height: 16),
+          // Dimensions section - single section with all dimension fields
+          _SectionCard(
+            title: 'Dimensions',
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('assessment_length'),
+                      decoration: _decoration.copyWith(labelText: 'length'),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
+                      onChanged: (v) =>
+                          controller.setField('assessment_length', v),
                     ),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text('Close'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('assessment_breadth'),
+                      decoration: _decoration.copyWith(labelText: 'breadth'),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('assessment_breadth', v),
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('assessment_breadth_2'),
+                      decoration: _decoration.copyWith(labelText: 'breadth'),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('assessment_breadth_2', v),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Property Details section - single section with all fields
+          _SectionCard(
+            title: 'Property Details',
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _SingleSelectVariablesDropdown(
+                      controller: controller,
+                      dataKey: 'property_uses',
+                      payloadKey: 'assessment_use_id',
+                      label: 'Property use',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _SingleSelectVariablesDropdown(
+                      controller: controller,
+                      dataKey: 'property_zones',
+                      payloadKey: 'assessment_zone_id',
+                      label: 'Property zone',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SingleSelectVariablesDropdown(
+                      controller: controller,
+                      dataKey: 'swimmings',
+                      payloadKey: 'swimming_pool',
+                      label: 'Swimming pool',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      decoration: _decoration.copyWith(
+                        labelText: 'Gated community',
+                      ),
+                      value: _val('gated_community'),
+                      isExpanded: true,
+                      selectedItemBuilder: (BuildContext context) {
+                        return const [
+                          Text('No', overflow: TextOverflow.ellipsis),
+                          Text('Yes', overflow: TextOverflow.ellipsis),
+                        ];
+                      },
+                      items: const [
+                        DropdownMenuItem(value: '0', child: Text('No')),
+                        DropdownMenuItem(value: '1', child: Text('Yes')),
+                      ],
+                      onChanged: (v) =>
+                          controller.setField('gated_community', v),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Additional Information section - single section with all fields in two columns
+          _SectionCard(
+            title: 'Additional Information',
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('total_mast'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'No of Masts',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) => controller.setField('total_mast', v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('total_shops'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'No of Shops',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) => controller.setField('total_shops', v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('total_compound_house'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'No of Compound House',
+                      ),
+                      keyboardType: TextInputType.number,
+                      onChanged: (v) =>
+                          controller.setField('total_compound_house', v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('compound_name'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'Compound Name',
+                      ),
+                      onChanged: (v) => controller.setField('compound_name', v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('due'),
+                      decoration: _decoration.copyWith(labelText: 'Due'),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (v) => controller.setField('due', v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('arrear_calculation'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'Arrear Calculation',
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('arrear_calculation', v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('property_rate_with_gst'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'Property Rate With GST',
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('property_rate_with_gst', v),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: _val('property_rate_without_gst'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'Property Rate Without GST',
+                      ),
+                      keyboardType: TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('property_rate_without_gst', v),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: _val('property_gst'),
+                decoration: _decoration.copyWith(labelText: 'Property GST'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                onChanged: (v) => controller.setField('property_gst', v),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Property Images',
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _DashedPicker(
+                      label: 'Image 1',
+                      onPick: () async {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? photo = await picker.pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 75,
+                        );
+                        if (photo != null)
+                          controller.addAssessmentPhoto(photo.path);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _DashedPicker(
+                      label: 'Image 2',
+                      onPick: () async {
+                        final ImagePicker picker = ImagePicker();
+                        final XFile? photo = await picker.pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 75,
+                        );
+                        if (photo != null)
+                          controller.addAssessmentPhoto(photo.path);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (photosSnapshot.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (int i = 0; i < photosSnapshot.length; i++)
+                      Stack(
+                        alignment: Alignment.topRight,
+                        children: [
+                          Image.file(
+                            File(photosSnapshot[i]),
+                            width: 90,
+                            height: 90,
+                            fit: BoxFit.cover,
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Colors.red,
+                            ),
+                            onPressed: () =>
+                                controller.removeAssessmentPhoto(i),
+                          ),
+                        ],
+                      ),
                   ],
                 ),
-              );
-            },
+              ],
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1553,7 +1625,7 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _LocationSection extends StatefulWidget {
-  const _LocationSection({required this.controller});
+  const _LocationSection({super.key, required this.controller});
   final PropertyController controller;
 
   @override
@@ -1562,11 +1634,34 @@ class _LocationSection extends StatefulWidget {
 
 class _LocationSectionState extends State<_LocationSection> {
   bool _isLoading = false;
+  late TextEditingController _digitalAddressController;
+  late FocusNode _digitalAddressFocusNode;
 
   @override
   void initState() {
     super.initState();
+    // Initialize controller with current value from payload
+    final String? initialValue =
+        widget.controller.payload['registry_digital_address'] as String?;
+    _digitalAddressController = TextEditingController(text: initialValue ?? '');
+    _digitalAddressFocusNode = FocusNode();
+    _digitalAddressFocusNode.addListener(() {
+      // Update payload when field loses focus
+      if (!_digitalAddressFocusNode.hasFocus) {
+        widget.controller.setField(
+          'registry_digital_address',
+          _digitalAddressController.text,
+        );
+      }
+    });
     _fetchLocation();
+  }
+
+  @override
+  void dispose() {
+    _digitalAddressController.dispose();
+    _digitalAddressFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchLocation() async {
@@ -1603,22 +1698,36 @@ class _LocationSectionState extends State<_LocationSection> {
     }
   }
 
+  String? _validateLatLong(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Required';
+    final String trimmed = v.trim();
+    // Expected format: "lat,long" (e.g., "8.237550256892234,-13.085966873914003")
+    final List<String> parts = trimmed.split(',');
+    if (parts.length != 2) {
+      return 'Format: lat,long';
+    }
+    final double? lat = double.tryParse(parts[0].trim());
+    final double? lng = double.tryParse(parts[1].trim());
+    if (lat == null || lng == null) {
+      return 'Invalid coordinates';
+    }
+    if (lat < -90 || lat > 90) return 'Latitude must be -90 to 90';
+    if (lng < -180 || lng > 180) return 'Longitude must be -180 to 180';
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Obx(() {
-      // Get current values from payload
-      final String? latLong =
-          widget.controller.payload['dor_lat_long'] as String?;
-      final String? digitalAddress =
-          widget.controller.payload['registry_digital_address'] as String?;
-
-      return _SectionCard(
-        title: 'Location',
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
+    return _SectionCard(
+      title: 'Location',
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Obx(() {
+                final String? latLong =
+                    widget.controller.payload['dor_lat_long'] as String?;
+                return TextFormField(
                   key: ValueKey('latlong_$latLong'),
                   initialValue: latLong,
                   decoration: _decoration.copyWith(
@@ -1630,26 +1739,24 @@ class _LocationSectionState extends State<_LocationSection> {
                     ),
                   ),
                   readOnly: true,
-                ),
+                  validator: _validateLatLong,
+                );
+              }),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                key: const ValueKey('digital_address_field'),
+                controller: _digitalAddressController,
+                focusNode: _digitalAddressFocusNode,
+                decoration: _decoration.copyWith(labelText: 'Digital Address'),
+                keyboardType: TextInputType.text,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  key: ValueKey('digital_$digitalAddress'),
-                  initialValue: digitalAddress,
-                  decoration: _decoration.copyWith(
-                    labelText: 'Digital Address',
-                  ),
-                  onChanged: (v) {
-                    widget.controller.setField('registry_digital_address', v);
-                  },
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    });
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   InputDecoration get _decoration => const InputDecoration(
@@ -1942,6 +2049,8 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> opts = _options;
+    final String? selectedValue = controller.payload[payloadKey] as String?;
+
     return DropdownButtonFormField<String>(
       decoration: const InputDecoration(
         border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
@@ -1951,13 +2060,29 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
         focusedBorder: OutlineInputBorder(
           borderSide: BorderSide(color: Colors.green, width: 2),
         ),
+        isDense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ).copyWith(labelText: label),
-      value: controller.payload[payloadKey] as String?,
+      value: selectedValue,
+      isExpanded: true,
+      selectedItemBuilder: (BuildContext context) {
+        return opts.map<Widget>((Map<String, dynamic> o) {
+          final String text = o['label']?.toString() ?? 'Item';
+          return Text(
+            text,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16),
+          );
+        }).toList();
+      },
       items: [
         for (final Map<String, dynamic> o in opts)
           DropdownMenuItem<String>(
             value: (o['id'] ?? o['value']).toString(),
-            child: Text(o['label']?.toString() ?? 'Item'),
+            child: Text(
+              o['label']?.toString() ?? 'Item',
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
       ],
       onChanged: (v) => controller.setField(payloadKey, v),
@@ -2210,7 +2335,7 @@ class _CouncilAdjustmentsChipsState extends State<_CouncilAdjustmentsChips> {
       children: [
         const SizedBox(height: 12),
         Text(
-          'Select Council Adjustments',
+          'Select Council',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),

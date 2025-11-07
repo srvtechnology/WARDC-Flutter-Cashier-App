@@ -35,6 +35,9 @@ class PropertyController extends GetxController {
     payload['randomdata'] = DateTime.now().millisecondsSinceEpoch.toString();
     // Default to non-organization
     payload['is_organization'] = '0';
+    // Default values for assessment form
+    payload['group_name'] = 'A';
+    payload['ownerTitle'] = '1';
     await _maybeRefreshVariables();
     super.onInit();
   }
@@ -120,6 +123,9 @@ class PropertyController extends GetxController {
     if (step.value == 0) {
       _printLandlordPayload();
     }
+    if (step.value == 3) {
+      _printGeoRegistryPayload();
+    }
     if (step.value < 4) {
       step.value += 1;
     }
@@ -199,5 +205,58 @@ class PropertyController extends GetxController {
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print
     print(out);
+  }
+
+  void _printGeoRegistryPayload() {
+    final Map<String, dynamic> out = <String, dynamic>{};
+    
+    // Print registry points (1-8)
+    for (int i = 1; i <= 8; i++) {
+      final String key = 'registry_point$i';
+      final dynamic value = payload[key];
+      if (value != null) {
+        out[key] = value.toString();
+      }
+    }
+    
+    // Print digital address and dor_lat_long
+    if (payload['registry_digital_address'] != null) {
+      out['registry_digital_address'] = payload['registry_digital_address'].toString();
+    }
+    if (payload['dor_lat_long'] != null) {
+      out['dor_lat_long'] = payload['dor_lat_long'].toString();
+    }
+    
+    // Print registry meters
+    final List<int> indices = registry.keys
+        .map((k) => int.tryParse(k) ?? -1)
+        .where((i) => i >= 0)
+        .toList()
+      ..sort();
+    
+    for (final int idx in indices) {
+      final Map<String, String>? meter = registry['$idx'];
+      if (meter != null) {
+        final String? meterNumber = meter['meter_number'];
+        final String? meterImage = meter['meter_image'];
+        if (meterNumber != null) {
+          out['registry[$idx][meter_number]'] = meterNumber;
+        }
+        if (meterImage != null && meterImage.isNotEmpty) {
+          out['registry[$idx][meter_image]'] = '(file upload)';
+        }
+      }
+    }
+    
+    Get.log('Geo Registry payload: ' + out.toString());
+    // Also print for dev consoles that do not capture Get.log
+    // ignore: avoid_print
+    print('\n=== Geo Registry Payload ===');
+    for (final MapEntry<String, dynamic> entry in out.entries) {
+      // ignore: avoid_print
+      print('"${entry.key}": ${entry.value is String ? '"${entry.value}"' : entry.value}');
+    }
+    // ignore: avoid_print
+    print('===========================\n');
   }
 }
