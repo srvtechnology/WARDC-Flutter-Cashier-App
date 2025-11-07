@@ -60,7 +60,9 @@ class PropertyService {
 
     // Registry meters
     if (registryItems != null) {
-      registryItems.forEach((String idx, dynamic item) async {
+      for (final MapEntry<String, dynamic> entry in registryItems.entries) {
+        final String idx = entry.key;
+        final dynamic item = entry.value;
         if (item is Map<String, dynamic>) {
           final String? number = item['meter_number']?.toString();
           final String? imagePath = item['meter_image']?.toString();
@@ -83,7 +85,7 @@ class PropertyService {
             );
           }
         }
-      });
+      }
     }
 
     // Assessment images
@@ -102,7 +104,7 @@ class PropertyService {
 
     // Delivered proof image (optional)
     final String? deliveredImagePath =
-        fields.remove('delivered_image_path') as String?;
+        fields['delivered_image_path'] as String?;
     if (deliveredImagePath != null &&
         deliveredImagePath.isNotEmpty &&
         File(deliveredImagePath).existsSync()) {

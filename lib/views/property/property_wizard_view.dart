@@ -303,15 +303,41 @@ class _StepForms extends StatelessWidget {
                 _SectionCard(
                   title: 'Personal Information',
                   children: [
-                    TextFormField(
-                      initialValue: _val('landlord_first_name'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'First Name*',
-                      ),
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: _req,
-                      onChanged: (v) =>
-                          controller.setField('landlord_first_name', v),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            decoration: _decoration.copyWith(
+                              labelText: 'Title',
+                            ),
+                            items: const [
+                              DropdownMenuItem(value: '1', child: Text('Mr.')),
+                              DropdownMenuItem(value: '2', child: Text('Ms.')),
+                            ],
+                            value:
+                                _val('landlord_ownerTitle_id') ??
+                                _val('ownerTitle'),
+                            onChanged: (v) {
+                              controller.setField('landlord_ownerTitle_id', v);
+                              controller.setField('ownerTitle', v);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: _val('landlord_first_name'),
+                            decoration: _decoration.copyWith(
+                              labelText: 'First Name*',
+                            ),
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            validator: _req,
+                            onChanged: (v) =>
+                                controller.setField('landlord_first_name', v),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
