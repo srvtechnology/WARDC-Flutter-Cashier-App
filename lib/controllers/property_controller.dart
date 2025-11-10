@@ -327,14 +327,17 @@ class PropertyController extends GetxController {
       // Merge and prepare all payload data from all steps
       final Map<String, dynamic> finalPayload = _prepareSubmissionPayload();
 
-      // Log the final payload for debugging
-      Get.log('Submitting property with payload: ${jsonEncode(finalPayload)}');
+      // Log the merged payload from all steps
+      _printMergedPayload(finalPayload);
 
       final Map<String, dynamic> response = await PropertyService().savePropertyMultipart(
         fields: finalPayload,
         registryItems: registry,
         assessmentImagePaths: assessmentPhotos,
       );
+
+      // Log the complete API response
+      _printApiResponse(response);
 
       // Check response for success
       if (response['success'] == true) {
@@ -355,6 +358,57 @@ class PropertyController extends GetxController {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  void _printMergedPayload(Map<String, dynamic> mergedPayload) {
+    Get.log('Merged payload from all steps: ${jsonEncode(mergedPayload)}');
+    // Also print for dev consoles that do not capture Get.log
+    // ignore: avoid_print
+    print('\n=== Merged Payload (All Steps) ===');
+    for (final MapEntry<String, dynamic> entry in mergedPayload.entries) {
+      // ignore: avoid_print
+      if (entry.value is List) {
+        // ignore: avoid_print
+        print('"${entry.key}": ${entry.value}');
+      } else {
+        // ignore: avoid_print
+        print('"${entry.key}": "${entry.value}"');
+      }
+    }
+    // ignore: avoid_print
+    print('==================================\n');
+  }
+
+  void _printApiResponse(Map<String, dynamic> response) {
+    Get.log('API Response: ${jsonEncode(response)}');
+    // Also print for dev consoles that do not capture Get.log
+    // ignore: avoid_print
+    print('\n=== API POST Response ===');
+    // ignore: avoid_print
+    print('Status: ${response['success'] == true ? 'Success' : 'Failed'}');
+    // ignore: avoid_print
+    print('Message: ${response['message'] ?? 'N/A'}');
+    if (response['data'] != null) {
+      // ignore: avoid_print
+      print('Data: ${jsonEncode(response['data'])}');
+    }
+    // ignore: avoid_print
+    print('Full Response:');
+    for (final MapEntry<String, dynamic> entry in response.entries) {
+      // ignore: avoid_print
+      if (entry.value is Map) {
+        // ignore: avoid_print
+        print('"${entry.key}": ${jsonEncode(entry.value)}');
+      } else if (entry.value is List) {
+        // ignore: avoid_print
+        print('"${entry.key}": ${entry.value}');
+      } else {
+        // ignore: avoid_print
+        print('"${entry.key}": "${entry.value}"');
+      }
+    }
+    // ignore: avoid_print
+    print('==========================\n');
   }
 
   void _printLandlordPayload() {
@@ -562,7 +616,6 @@ class PropertyController extends GetxController {
       'assessment_window_type_id',
       'assessment_length',
       'assessment_breadth',
-      'assessment_breadth_2',
       'assessment_value_added_id',
       'assessment_use_id',
       'assessment_zone_id',
@@ -575,11 +628,6 @@ class PropertyController extends GetxController {
       'randomdata',
       'group_name',
       'ownerTitle',
-      'property_rate_without_gst',
-      'property_rate_with_gst',
-      'property_gst',
-      'due',
-      'arrear_calculation',
       'newAdjustmentIds',
     ];
     final Map<String, dynamic> out = <String, dynamic>{};

@@ -1213,7 +1213,7 @@ class _StepForms extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          // Materials section - single section with both fields
+          // Materials section - single section with all material fields
           _SectionCard(
             title: 'Materials',
             children: [
@@ -1237,6 +1237,13 @@ class _StepForms extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              _SingleSelectVariablesDropdown(
+                controller: controller,
+                dataKey: 'property_window_types',
+                payloadKey: 'assessment_window_type_id',
+                label: 'Window Type',
               ),
             ],
           ),
@@ -1268,18 +1275,6 @@ class _StepForms extends StatelessWidget {
                       ),
                       onChanged: (v) =>
                           controller.setField('assessment_breadth', v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('assessment_breadth_2'),
-                      decoration: _decoration.copyWith(labelText: 'breadth'),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (v) =>
-                          controller.setField('assessment_breadth_2', v),
                     ),
                   ),
                 ],
@@ -1404,74 +1399,6 @@ class _StepForms extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('due'),
-                      decoration: _decoration.copyWith(labelText: 'Due'),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (v) => controller.setField('due', v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('arrear_calculation'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'Arrear Calculation',
-                      ),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (v) =>
-                          controller.setField('arrear_calculation', v),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('property_rate_with_gst'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'Property Rate With GST',
-                      ),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (v) =>
-                          controller.setField('property_rate_with_gst', v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('property_rate_without_gst'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'Property Rate Without GST',
-                      ),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      onChanged: (v) =>
-                          controller.setField('property_rate_without_gst', v),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                initialValue: _val('property_gst'),
-                decoration: _decoration.copyWith(labelText: 'Property GST'),
-                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                onChanged: (v) => controller.setField('property_gst', v),
               ),
             ],
           ),
