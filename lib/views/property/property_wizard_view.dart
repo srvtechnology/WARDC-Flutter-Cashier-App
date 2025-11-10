@@ -126,33 +126,80 @@ class _HeaderStepper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Top row for labels that should be above (odd indices: 1, 3)
           Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: List.generate(labels.length * 2 - 1, (i) {
+              if (i.isOdd) {
+                return Expanded(
+                  child: Container(),
+                ); // Placeholder for connectors
+              }
+              final int step = i ~/ 2;
+              final bool isAbove = step.isOdd; // Odd indices (1, 3) go above
+              if (!isAbove) {
+                return const SizedBox(
+                  width: 32,
+                ); // Placeholder for below labels
+              }
+              final bool isActive = step == currentIndex;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: Text(
+                      labels[step],
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isActive ? Colors.green : Colors.black87,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          // Middle row with circles and connectors
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(labels.length * 2 - 1, (i) {
               if (i.isOdd) {
                 final int left = (i - 1) ~/ 2;
                 final bool active = left < currentIndex;
                 return Expanded(
                   child: Container(
-                    height: 4,
-                    color: active ? Colors.green : Colors.grey.shade300,
+                    height: 3,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(
+                      color: active ? Colors.green : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(1.5),
+                    ),
                   ),
                 );
               }
               final int step = i ~/ 2;
               final bool isDone = step <= currentIndex;
               return Container(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isDone ? Colors.green : Colors.white,
                   border: Border.all(
-                    color: isDone ? Colors.green : Colors.grey,
+                    color: isDone ? Colors.green : Colors.grey.shade400,
+                    width: 2,
                   ),
                 ),
                 child: Text(
@@ -160,32 +207,48 @@ class _HeaderStepper extends StatelessWidget {
                   style: TextStyle(
                     color: isDone ? Colors.white : Colors.grey[800],
                     fontWeight: FontWeight.w600,
+                    fontSize: 13,
                   ),
                 ),
               );
             }),
           ),
-          const SizedBox(height: 6),
+          // Bottom row for labels that should be below (even indices: 0, 2, 4)
+          const SizedBox(height: 10),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final String label in labels)
-                Expanded(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(labels.length * 2 - 1, (i) {
+              if (i.isOdd) {
+                return Expanded(
+                  child: Container(),
+                ); // Placeholder for connectors
+              }
+              final int step = i ~/ 2;
+              final bool isBelow =
+                  step.isEven; // Even indices (0, 2, 4) go below
+              if (!isBelow) {
+                return const SizedBox(
+                  width: 32,
+                ); // Placeholder for above labels
+              }
+              final bool isActive = step == currentIndex;
+              return Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
                   child: Text(
-                    label,
+                    labels[step],
                     textAlign: TextAlign.center,
+                    maxLines: 1,
                     style: TextStyle(
                       fontSize: 12,
-                      color: labels.indexOf(label) == currentIndex
-                          ? Colors.green
-                          : Colors.black87,
-                      fontWeight: labels.indexOf(label) == currentIndex
-                          ? FontWeight.w600
-                          : FontWeight.w500,
+                      color: isActive ? Colors.green : Colors.black87,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      height: 1.2,
                     ),
                   ),
                 ),
-            ],
+              );
+            }),
           ),
         ],
       ),
@@ -620,26 +683,17 @@ class _StepForms extends StatelessWidget {
               title: 'Category Type',
               children: [
                 DropdownButtonFormField<String>(
-                  decoration: _decoration.copyWith(
-                    labelText: 'Category Type*',
-                  ),
+                  decoration: _decoration.copyWith(labelText: 'Category Type*'),
                   items: const [
-                    DropdownMenuItem(
-                      value: 'R',
-                      child: Text('Residential'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'C',
-                      child: Text('Commercial'),
-                    ),
+                    DropdownMenuItem(value: 'R', child: Text('Residential')),
+                    DropdownMenuItem(value: 'C', child: Text('Commercial')),
                   ],
                   value: _val('categoryType'),
                   isExpanded: true,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
-                  validator: (v) =>
-                      (v == null || v.toString().trim().isEmpty)
-                          ? 'Required'
-                          : null,
+                  validator: (v) => (v == null || v.toString().trim().isEmpty)
+                      ? 'Required'
+                      : null,
                   onChanged: (v) => controller.setField('categoryType', v),
                 ),
               ],
@@ -2401,7 +2455,8 @@ class _TitleSelect extends StatelessWidget {
     return Obx(() {
       final int _ = controller.variablesTick.value; // dependency only
       final List<Map<String, dynamic>> opts = _options;
-      final String? selectedValue = controller.payload[payloadKey] as String? ??
+      final String? selectedValue =
+          controller.payload[payloadKey] as String? ??
           controller.payload['ownerTitle'] as String?;
 
       return DropdownButtonFormField<String>(
