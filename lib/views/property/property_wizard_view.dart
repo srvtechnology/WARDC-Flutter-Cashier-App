@@ -1915,12 +1915,21 @@ class _InaccessibleMultiSelectState extends State<_InaccessibleMultiSelect> {
 
   List<Map<String, dynamic>> get _options {
     final dynamic vars = widget.controller.cachedVariables;
-    if (vars is Map &&
-        vars['data'] is Map &&
-        (vars['data'] as Map)['property_inaccessibles'] is List) {
-      return List<Map<String, dynamic>>.from(
-        (vars['data'] as Map)['property_inaccessibles'] as List,
-      );
+    if (vars == null) return const <Map<String, dynamic>>[];
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+    final dynamic raw = data['property_inaccessibles'];
+    if (raw is List) {
+      final List<Map<String, dynamic>> normalized = <Map<String, dynamic>>[];
+      for (final dynamic e in raw) {
+        if (e is Map) {
+          normalized.add(Map<String, dynamic>.from(e));
+        }
+      }
+      return normalized;
     }
     return const <Map<String, dynamic>>[];
   }
@@ -2037,12 +2046,21 @@ class _MultiSelectVariablesChipsState
   final Set<int> _selected = <int>{};
   List<Map<String, dynamic>> get _options {
     final dynamic vars = widget.controller.cachedVariables;
-    if (vars is Map &&
-        vars['data'] is Map &&
-        (vars['data'] as Map)[widget.dataKey] is List) {
-      return List<Map<String, dynamic>>.from(
-        (vars['data'] as Map)[widget.dataKey] as List,
-      );
+    if (vars == null) return const <Map<String, dynamic>>[];
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+    final dynamic raw = data[widget.dataKey];
+    if (raw is List) {
+      final List<Map<String, dynamic>> normalized = <Map<String, dynamic>>[];
+      for (final dynamic e in raw) {
+        if (e is Map) {
+          normalized.add(Map<String, dynamic>.from(e));
+        }
+      }
+      return normalized;
     }
     return const <Map<String, dynamic>>[];
   }
@@ -2101,12 +2119,21 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
 
   List<Map<String, dynamic>> get _options {
     final dynamic vars = controller.cachedVariables;
-    if (vars is Map &&
-        vars['data'] is Map &&
-        (vars['data'] as Map)[dataKey] is List) {
-      return List<Map<String, dynamic>>.from(
-        (vars['data'] as Map)[dataKey] as List,
-      );
+    if (vars == null) return const <Map<String, dynamic>>[];
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+    final dynamic raw = data[dataKey];
+    if (raw is List) {
+      final List<Map<String, dynamic>> normalized = <Map<String, dynamic>>[];
+      for (final dynamic e in raw) {
+        if (e is Map) {
+          normalized.add(Map<String, dynamic>.from(e));
+        }
+      }
+      return normalized;
     }
     return const <Map<String, dynamic>>[];
   }
@@ -2519,12 +2546,21 @@ class _CouncilAdjustmentsChipsState extends State<_CouncilAdjustmentsChips> {
 
   List<Map<String, dynamic>> get _options {
     final dynamic vars = widget.controller.cachedVariables;
-    if (vars is Map &&
-        vars['data'] is Map &&
-        (vars['data'] as Map)['council_adjustments'] is List) {
-      return List<Map<String, dynamic>>.from(
-        (vars['data'] as Map)['council_adjustments'] as List,
-      );
+    if (vars == null) return const <Map<String, dynamic>>[];
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+    final dynamic raw = data['council_adjustments'];
+    if (raw is List) {
+      final List<Map<String, dynamic>> normalized = <Map<String, dynamic>>[];
+      for (final dynamic e in raw) {
+        if (e is Map) {
+          normalized.add(Map<String, dynamic>.from(e));
+        }
+      }
+      return normalized;
     }
     return const <Map<String, dynamic>>[];
   }

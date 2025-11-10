@@ -319,6 +319,9 @@ class PropertyController extends GetxController {
       return;
     }
 
+    // Log step 5 (Assessment) payload before submission
+    _printAssessmentPayload();
+
     isSubmitting.value = true;
     try {
       // Merge and prepare all payload data from all steps
@@ -545,6 +548,76 @@ class PropertyController extends GetxController {
     for (final MapEntry<String, dynamic> entry in out.entries) {
       // ignore: avoid_print
       print('"${entry.key}": "${entry.value}"');
+    }
+    // ignore: avoid_print
+    print('==================================\n');
+  }
+
+  void _printAssessmentPayload() {
+    final List<String> keys = <String>[
+      'assessment_categories_id',
+      'property_types',
+      'assessment_wall_materials_id',
+      'assessment_roofs_materials_id',
+      'assessment_window_type_id',
+      'assessment_length',
+      'assessment_breadth',
+      'assessment_breadth_2',
+      'assessment_value_added_id',
+      'assessment_use_id',
+      'assessment_zone_id',
+      'swimming_pool',
+      'gated_community',
+      'total_shops',
+      'total_mast',
+      'total_compound_house',
+      'compound_name',
+      'randomdata',
+      'group_name',
+      'ownerTitle',
+      'property_rate_without_gst',
+      'property_rate_with_gst',
+      'property_gst',
+      'due',
+      'arrear_calculation',
+      'newAdjustmentIds',
+    ];
+    final Map<String, dynamic> out = <String, dynamic>{};
+    for (final String k in keys) {
+      final dynamic value = payload[k];
+      if (value != null) {
+        if (value is List) {
+          out[k] = value;
+        } else {
+          out[k] = value.toString();
+        }
+      }
+    }
+    
+    // Handle assessment images separately (they're file paths)
+    if (assessmentPhotos.isNotEmpty) {
+      for (int i = 0; i < assessmentPhotos.length; i++) {
+        final String path = assessmentPhotos[i];
+        if (path.isNotEmpty) {
+          out['assessment_images_${i + 1}'] =
+              '(binary file: ${path.split('/').last})';
+        }
+      }
+    }
+    
+    Get.log('Assessment payload: ${jsonEncode(out)}');
+    // Also print for dev consoles that do not capture Get.log
+    // ignore: avoid_print
+    print('\n=== Step 5 (Assessment) Payload ===');
+    for (final MapEntry<String, dynamic> entry in out.entries) {
+      // ignore: avoid_print
+      if (entry.value is List) {
+        // ignore: avoid_print
+        print('"${entry.key}": ${entry.value}');
+      } else {
+        // ignore: avoid_print
+        print('"${entry.key}": "${entry.value}"');
+      }
     }
     // ignore: avoid_print
     print('==================================\n');
