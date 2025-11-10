@@ -124,6 +124,12 @@ class PropertyController extends GetxController {
     if (step.value == 0) {
       _printLandlordPayload();
     }
+    if (step.value == 1) {
+      _printPropertyPayload();
+    }
+    if (step.value == 2) {
+      _printOccupancyPayload();
+    }
     if (step.value == 3) {
       _printGeoRegistryPayload();
     }
@@ -376,12 +382,116 @@ class PropertyController extends GetxController {
     ];
     final Map<String, dynamic> out = <String, dynamic>{};
     for (final String k in keys) {
-      out[k] = payload[k];
+      final dynamic value = payload[k];
+      if (value != null) {
+        out[k] = value.toString();
+      }
     }
-    Get.log('Landlord payload: ' + out.toString());
+    Get.log('Landlord payload: ${jsonEncode(out)}');
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print
-    print(out);
+    print('\n=== Step 1 (Landlord) Payload ===');
+    for (final MapEntry<String, dynamic> entry in out.entries) {
+      // ignore: avoid_print
+      print('"${entry.key}": "${entry.value}"');
+    }
+    // ignore: avoid_print
+    print('==================================\n');
+  }
+
+  void _printPropertyPayload() {
+    final List<String> keys = <String>[
+      'categoryType',
+      'property_street_number',
+      'property_street_numbernew',
+      'property_street_name',
+      'property_ward',
+      'property_constituency',
+      'property_section',
+      'property_chiefdom',
+      'property_district',
+      'property_province',
+      'property_postcode',
+      'is_draft_delivered',
+      'delivered_name',
+      'delivered_number',
+      'property_inaccessable',
+    ];
+    final Map<String, dynamic> out = <String, dynamic>{};
+    for (final String k in keys) {
+      final dynamic value = payload[k];
+      if (value != null) {
+        if (value is List) {
+          out[k] = value;
+        } else {
+          out[k] = value.toString();
+        }
+      }
+    }
+    
+    // Handle delivered_image_path separately (it's a file path)
+    final String? deliveredImagePath =
+        payload['delivered_image_path'] as String?;
+    if (deliveredImagePath != null && deliveredImagePath.isNotEmpty) {
+      out['delivered_image'] = '(binary file: ${deliveredImagePath.split('/').last})';
+    }
+    
+    Get.log('Property payload: ${jsonEncode(out)}');
+    // Also print for dev consoles that do not capture Get.log
+    // ignore: avoid_print
+    print('\n=== Step 2 (Property) Payload ===');
+    for (final MapEntry<String, dynamic> entry in out.entries) {
+      // ignore: avoid_print
+      if (entry.value is List) {
+        // ignore: avoid_print
+        print('"${entry.key}": ${entry.value}');
+      } else {
+        // ignore: avoid_print
+        print('"${entry.key}": "${entry.value}"');
+      }
+    }
+    // ignore: avoid_print
+    print('==================================\n');
+  }
+
+  void _printOccupancyPayload() {
+    final List<String> keys = <String>[
+      'occupancy_type',
+      'occupancy_tenant_first_name',
+      'occupancy_middle_name',
+      'occupancy_surname',
+      'occupancy_mobile_1',
+      'occupancy_mobile_2',
+      'tenant_ownerTitle_id',
+    ];
+    final Map<String, dynamic> out = <String, dynamic>{};
+    for (final String k in keys) {
+      final dynamic value = payload[k];
+      if (value != null) {
+        if (value is List) {
+          out[k] = value;
+        } else {
+          out[k] = value.toString();
+        }
+      }
+    }
+    
+    Get.log('Occupancy payload: ${jsonEncode(out)}');
+    // Also print for dev consoles that do not capture Get.log
+    // ignore: avoid_print
+    print('\n=== Step 3 (Occupancy) Payload ===');
+    for (final MapEntry<String, dynamic> entry in out.entries) {
+      // ignore: avoid_print
+      if (entry.value is List) {
+        // ignore: avoid_print
+        print('"${entry.key}": ${entry.value}');
+      } else {
+        // ignore: avoid_print
+        print('"${entry.key}": "${entry.value}"');
+      }
+    }
+    // ignore: avoid_print
+    print('==================================\n');
   }
 
   void _printGeoRegistryPayload() {
@@ -391,16 +501,19 @@ class PropertyController extends GetxController {
     for (int i = 1; i <= 8; i++) {
       final String key = 'registry_point$i';
       final dynamic value = payload[key];
-      if (value != null) {
+      if (value != null && value.toString().trim().isNotEmpty) {
         out[key] = value.toString();
       }
     }
     
     // Print digital address and dor_lat_long
-    if (payload['registry_digital_address'] != null) {
-      out['registry_digital_address'] = payload['registry_digital_address'].toString();
+    if (payload['registry_digital_address'] != null &&
+        payload['registry_digital_address'].toString().trim().isNotEmpty) {
+      out['registry_digital_address'] =
+          payload['registry_digital_address'].toString();
     }
-    if (payload['dor_lat_long'] != null) {
+    if (payload['dor_lat_long'] != null &&
+        payload['dor_lat_long'].toString().trim().isNotEmpty) {
       out['dor_lat_long'] = payload['dor_lat_long'].toString();
     }
     
@@ -416,7 +529,7 @@ class PropertyController extends GetxController {
       if (meter != null) {
         final String? meterNumber = meter['meter_number'];
         final String? meterImage = meter['meter_image'];
-        if (meterNumber != null) {
+        if (meterNumber != null && meterNumber.trim().isNotEmpty) {
           out['registry[$idx][meter_number]'] = meterNumber;
         }
         if (meterImage != null && meterImage.isNotEmpty) {
@@ -425,15 +538,15 @@ class PropertyController extends GetxController {
       }
     }
     
-    Get.log('Geo Registry payload: ' + out.toString());
+    Get.log('Geo Registry payload: ${jsonEncode(out)}');
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print
-    print('\n=== Geo Registry Payload ===');
+    print('\n=== Step 4 (Geo Registry) Payload ===');
     for (final MapEntry<String, dynamic> entry in out.entries) {
       // ignore: avoid_print
-      print('"${entry.key}": ${entry.value is String ? '"${entry.value}"' : entry.value}');
+      print('"${entry.key}": "${entry.value}"');
     }
     // ignore: avoid_print
-    print('===========================\n');
+    print('==================================\n');
   }
 }

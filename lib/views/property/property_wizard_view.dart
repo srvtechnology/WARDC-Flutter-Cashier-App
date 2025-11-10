@@ -306,21 +306,10 @@ class _StepForms extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: _decoration.copyWith(
-                              labelText: 'Title',
-                            ),
-                            items: const [
-                              DropdownMenuItem(value: '1', child: Text('Mr.')),
-                              DropdownMenuItem(value: '2', child: Text('Ms.')),
-                            ],
-                            value:
-                                _val('landlord_ownerTitle_id') ??
-                                _val('ownerTitle'),
-                            onChanged: (v) {
-                              controller.setField('landlord_ownerTitle_id', v);
-                              controller.setField('ownerTitle', v);
-                            },
+                          child: _TitleSelect(
+                            controller: controller,
+                            payloadKey: 'landlord_ownerTitle_id',
+                            label: 'Title',
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -369,6 +358,32 @@ class _StepForms extends StatelessWidget {
                       autovalidateMode: AutovalidateMode.onUserInteraction,
                       validator: _req,
                       onChanged: (v) => controller.setField('landlord_sex', v),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: _val('landlord_id_type'),
+                            decoration: _decoration.copyWith(
+                              labelText: 'Id type',
+                            ),
+                            onChanged: (v) =>
+                                controller.setField('landlord_id_type', v),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: _val('landlord_id_number'),
+                            decoration: _decoration.copyWith(
+                              labelText: 'Id number',
+                            ),
+                            onChanged: (v) =>
+                                controller.setField('landlord_id_number', v),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -602,6 +617,35 @@ class _StepForms extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionCard(
+              title: 'Category Type',
+              children: [
+                DropdownButtonFormField<String>(
+                  decoration: _decoration.copyWith(
+                    labelText: 'Category Type*',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'R',
+                      child: Text('Residential'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'C',
+                      child: Text('Commercial'),
+                    ),
+                  ],
+                  value: _val('categoryType'),
+                  isExpanded: true,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: (v) =>
+                      (v == null || v.toString().trim().isEmpty)
+                          ? 'Required'
+                          : null,
+                  onChanged: (v) => controller.setField('categoryType', v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _SectionCard(
               title: 'Delivery',
               children: [
                 Obx(() {
@@ -824,15 +868,10 @@ class _StepForms extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<String>(
-                        decoration: _decoration.copyWith(labelText: 'Title'),
-                        items: const [
-                          DropdownMenuItem(value: '1', child: Text('Mr.')),
-                          DropdownMenuItem(value: '2', child: Text('Ms.')),
-                        ],
-                        value: _val('tenant_ownerTitle_id'),
-                        onChanged: (v) =>
-                            controller.setField('tenant_ownerTitle_id', v),
+                      child: _TitleSelect(
+                        controller: controller,
+                        payloadKey: 'tenant_ownerTitle_id',
+                        label: 'Title',
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -2318,6 +2357,150 @@ class _AdminSelect extends StatelessWidget {
         onChanged: opts.isEmpty
             ? null
             : (v) => controller.setField(payloadKey, v),
+      );
+    });
+  }
+}
+
+class _TitleSelect extends StatelessWidget {
+  const _TitleSelect({
+    required this.controller,
+    required this.payloadKey,
+    required this.label,
+  });
+  final PropertyController controller;
+  final String payloadKey;
+  final String label;
+
+  static const List<Map<String, dynamic>> _defaultTitles = [
+    {'id': '1', 'label': 'Mr.'},
+    {'id': '2', 'label': 'Ms.'},
+  ];
+
+  List<Map<String, dynamic>> get _options {
+    final dynamic vars = controller.cachedVariables;
+    if (vars == null) return _defaultTitles;
+    if (vars is! Map) return _defaultTitles;
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return _defaultTitles;
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+
+    // First, try "all_titles" from the API (as per API specification)
+    final dynamic allTitlesRaw = data['all_titles'];
+    if (allTitlesRaw is List && allTitlesRaw.isNotEmpty) {
+      final List<Map<String, dynamic>> titles = <Map<String, dynamic>>[];
+      for (final dynamic e in allTitlesRaw) {
+        if (e is Map) {
+          final Map<String, dynamic> titleMap = Map<String, dynamic>.from(e);
+          // Filter by is_active if present (only show active titles)
+          final dynamic isActive = titleMap['is_active'];
+          if (isActive == null || isActive == 1) {
+            titles.add(titleMap);
+          }
+        }
+      }
+      if (titles.isNotEmpty) return titles;
+    }
+
+    // Fallback: Try other possible field names for titles
+    final List<String> possibleKeys = [
+      'titles',
+      'owner_titles',
+      'titles_list',
+      'ownerTitle',
+      'owner_title',
+    ];
+
+    for (final String key in possibleKeys) {
+      final dynamic raw = data[key];
+      if (raw is List && raw.isNotEmpty) {
+        final List<Map<String, dynamic>> titles = <Map<String, dynamic>>[];
+        for (final dynamic e in raw) {
+          if (e is Map) {
+            titles.add(Map<String, dynamic>.from(e));
+          }
+        }
+        if (titles.isNotEmpty) return titles;
+      }
+      // Also check if it's a Map format (like admin fields)
+      if (raw is Map) {
+        final Map<String, dynamic> m = Map<String, dynamic>.from(raw);
+        final List<Map<String, dynamic>> titles = m.entries
+            .map<Map<String, dynamic>>(
+              (e) => <String, dynamic>{
+                'id': e.key.toString(),
+                'label': e.value.toString(),
+              },
+            )
+            .toList();
+        if (titles.isNotEmpty) return titles;
+      }
+    }
+
+    // Fallback to default titles if not found in API
+    return _defaultTitles;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final int _ = controller.variablesTick.value; // dependency only
+      final List<Map<String, dynamic>> opts = _options;
+      final String? selectedValue = controller.payload[payloadKey] as String? ??
+          controller.payload['ownerTitle'] as String?;
+
+      return DropdownButtonFormField<String>(
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green, width: 2),
+          ),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ).copyWith(labelText: label),
+        value: opts.isEmpty ? null : selectedValue,
+        isExpanded: true,
+        hint: opts.isEmpty
+            ? const Text('Loading...', style: TextStyle(color: Colors.grey))
+            : null,
+        selectedItemBuilder: opts.isEmpty
+            ? null
+            : (context) => [
+                for (final Map<String, dynamic> o in opts)
+                  Text(
+                    o['label']?.toString() ?? 'Item',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+        items: opts.isEmpty
+            ? [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  enabled: false,
+                  child: Text('Loading options...'),
+                ),
+              ]
+            : [
+                for (final Map<String, dynamic> o in opts)
+                  DropdownMenuItem<String>(
+                    value: (o['id'] ?? o['value']).toString(),
+                    child: Text(o['label']?.toString() ?? 'Item'),
+                  ),
+              ],
+        onChanged: opts.isEmpty
+            ? null
+            : (v) {
+                controller.setField(payloadKey, v);
+                if (payloadKey == 'landlord_ownerTitle_id') {
+                  controller.setField('ownerTitle', v);
+                }
+              },
       );
     });
   }
