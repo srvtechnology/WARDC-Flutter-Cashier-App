@@ -344,9 +344,12 @@ class PropertyController extends GetxController {
         final String message = response['message']?.toString() ?? 
             'Property saved successfully';
         Get.snackbar('Success', message);
-        
-        // Optionally navigate back or reset form
-        // Get.back();
+
+        // Reset local state so next create starts fresh
+        _resetFormState();
+
+        // Go back to listing and signal success so it can auto-refresh
+        Get.back(result: true);
       } else {
         final String errorMsg = response['message']?.toString() ?? 
             'Failed to save property';
@@ -358,6 +361,18 @@ class PropertyController extends GetxController {
     } finally {
       isSubmitting.value = false;
     }
+  }
+
+  void _resetFormState() {
+    step.value = 0;
+    payload.clear();
+    registry.clear();
+    assessmentPhotos.clear();
+    // re-initialize defaults
+    payload['randomdata'] = DateTime.now().millisecondsSinceEpoch.toString();
+    payload['is_organization'] = '0';
+    payload['group_name'] = 'A';
+    payload['ownerTitle'] = '1';
   }
 
   void _printMergedPayload(Map<String, dynamic> mergedPayload) {
