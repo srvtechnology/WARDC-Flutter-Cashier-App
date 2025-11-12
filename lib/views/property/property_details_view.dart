@@ -18,14 +18,19 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   String _text(dynamic v) => v?.toString() ?? '—';
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
-  Map<String, dynamic> get _landlordFew =>
-      Map<String, dynamic>.from((prop['landlord_few'] ?? {}) as Map? ?? {});
-  Map<String, dynamic> get _userDetails =>
-      Map<String, dynamic>.from((prop['user_details'] ?? {}) as Map? ?? {});
+  Map<String, dynamic> get _landlord =>
+      Map<String, dynamic>.from((prop['landlord'] ?? {}) as Map? ?? {});
   Map<String, dynamic> get _geo =>
       Map<String, dynamic>.from((prop['geo_registry'] ?? {}) as Map? ?? {});
-  Map<String, dynamic> get _assessment =>
-      Map<String, dynamic>.from((prop['assessment'] ?? {}) as Map? ?? {});
+  Map<String, dynamic> get _assessmentsObject {
+    final List<dynamic>? assessments = prop['assessments_object'] as List?;
+    if (assessments != null && assessments.isNotEmpty) {
+      return Map<String, dynamic>.from((assessments[0] as Map? ?? {}));
+    }
+    return {};
+  }
+  Map<String, dynamic> get _occupancy =>
+      Map<String, dynamic>.from((prop['occupancy'] ?? {}) as Map? ?? {});
   List<dynamic> get _occupancies => (prop['occupancies'] as List?) ?? const [];
   List<dynamic> get _propertyInaccessible =>
       (prop['property_inaccessible'] as List?) ?? const [];
@@ -87,45 +92,46 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             ? '1'
             : '0';
       case 'landlord_ownerTitle_id':
-        final dynamic tId = prop['landlord_ownerTitle_id'];
+        final dynamic tId = _landlord['ownerTitle'] ?? _landlord['ownerTitle_id'];
         final String lbl = _labelFor('all_titles', tId);
         return (lbl.isEmpty || lbl == 'null') ? _text(tId) : lbl;
       case 'landlord_first_name':
-        return _text(_landlordFew['first_name']);
+        return _text(_landlord['first_name']);
       case 'landlord_middle_name':
-        return _text(_landlordFew['middle_name']);
+        return _text(_landlord['middle_name']);
       case 'landlord_surname':
-        return _text(_landlordFew['surname']);
+        return _text(_landlord['surname']);
       case 'landlord_sex':
-        return _text(_userDetails['gender']);
+        final String sex = _text(_landlord['sex']);
+        return sex.toUpperCase() == 'M' ? 'M' : (sex.toUpperCase() == 'F' ? 'F' : sex);
       case 'landlord_email':
-        return _text(_userDetails['email']);
+        return _text(_landlord['email']);
       case 'landlord_id_type':
-        return _text(prop['landlord_id_type']); // not provided in listing
+        return _text(_landlord['id_type']);
       case 'landlord_id_number':
-        return _text(prop['landlord_id_number']); // not provided in listing
+        return _text(_landlord['id_number']);
       case 'landlord_street_number':
-        return _text(prop['street_number']);
+        return _text(_landlord['street_number']);
       case 'landlord_street_name':
-        return _text(prop['street_name']);
+        return _text(_landlord['street_name']);
       case 'landlord_postcode':
-        return _text(prop['postcode']);
+        return _text(_landlord['postcode']);
       case 'landlord_ward':
-        return _text(prop['ward']);
+        return _text(_landlord['ward']);
       case 'landlord_constituency':
-        return _text(prop['constituency']);
+        return _text(_landlord['constituency']);
       case 'landlord_section':
-        return _text(prop['section']);
+        return _text(_landlord['section']);
       case 'landlord_chiefdom':
-        return _text(prop['chiefdom']);
+        return _text(_landlord['chiefdom']);
       case 'landlord_district':
-        return _text(prop['district']);
+        return _text(_landlord['district']);
       case 'landlord_province':
-        return _text(prop['province']);
+        return _text(_landlord['province']);
       case 'landlord_mobile_1':
-        return _text(prop['landlord_mobile_1']); // not provided in listing
+        return _text(_landlord['mobile_1'] ?? _landlord['phone_number']);
       case 'landlord_mobile_2':
-        return _text(prop['landlord_mobile_2']); // not provided in listing
+        return _text(_landlord['mobile_2']);
 
       // Step 2 - Property (create form keys)
       case 'categoryType':
@@ -180,12 +186,19 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             .toList();
         return types.isEmpty ? '[]' : types.toString();
       case 'occupancy_tenant_first_name':
+        return _text(_occupancy['tenant_first_name']);
       case 'occupancy_middle_name':
+        return _text(_occupancy['middle_name']);
       case 'occupancy_surname':
+        return _text(_occupancy['surname']);
       case 'occupancy_mobile_1':
+        return _text(_occupancy['mobile_1']);
       case 'occupancy_mobile_2':
+        return _text(_occupancy['mobile_2']);
       case 'tenant_ownerTitle_id':
-        return '—'; // not provided in listing
+        final dynamic tId = _occupancy['ownerTenantTitle_id'] ?? _occupancy['ownerTenantTitle'];
+        final String lbl = _labelFor('all_titles', tId);
+        return (lbl.isEmpty || lbl == 'null') ? _text(tId) : lbl;
 
       // Step 4 - Geo Registry
       case 'registry_digital_address':
@@ -193,32 +206,73 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       case 'dor_lat_long':
         return _text(_geo['dor_lat_long']);
       // Step 5 - Assessment (mapped to create form field names)
+      case 'assessment_categories_id':
+        // Get from categories array in assessments_object
+        final List<dynamic>? categories = _assessmentsObject['categories'] as List?;
+        if (categories != null && categories.isNotEmpty) {
+          final ids = categories
+              .whereType<Map>()
+              .map((e) => e['id'])
+              .where((e) => e != null)
+              .map((e) => e.toString())
+              .toList();
+          return ids.isEmpty ? '[]' : ids.toString();
+        }
+        return '[]';
+      case 'property_types':
+        // Get from types array in assessments_object
+        final List<dynamic>? types = _assessmentsObject['types'] as List?;
+        if (types != null && types.isNotEmpty) {
+          final ids = types
+              .whereType<Map>()
+              .map((e) => e['id'])
+              .where((e) => e != null)
+              .map((e) => e.toString())
+              .toList();
+          return ids.isEmpty ? '[]' : ids.toString();
+        }
+        return '[]';
       case 'assessment_wall_materials_id':
-        return _labelFor('property_wall_materials', _assessment['property_wall_materials']);
+        return _labelFor('property_wall_materials', _assessmentsObject['property_wall_materials']);
       case 'assessment_roofs_materials_id':
-        return _labelFor('property_roofs_materials', _assessment['roofs_materials']);
+        return _labelFor('property_roofs_materials', _assessmentsObject['roofs_materials']);
       case 'assessment_window_type_id':
-        return _labelFor('property_window_types', _assessment['property_window_type']);
+        return _labelFor('property_window_types', _assessmentsObject['property_window_type']);
       case 'assessment_length':
-        return _text(_assessment['length']);
+        return _text(_assessmentsObject['assessment_length'] ?? _assessmentsObject['length']);
       case 'assessment_breadth':
-        return _text(_assessment['breadth']);
+        return _text(_assessmentsObject['assessment_breadth'] ?? _assessmentsObject['breadth']);
+      case 'assessment_value_added_id':
+        // Get from values_added array in assessments_object
+        final List<dynamic>? valuesAdded = _assessmentsObject['values_added'] as List?;
+        if (valuesAdded != null && valuesAdded.isNotEmpty) {
+          final ids = valuesAdded
+              .whereType<Map>()
+              .map((e) => e['id'])
+              .where((e) => e != null)
+              .map((e) => e.toString())
+              .toList();
+          return ids.isEmpty ? '[]' : ids.toString();
+        }
+        return '[]';
       case 'assessment_use_id':
-        return _labelFor('property_uses', _assessment['property_use']);
+        return _labelFor('property_uses', _assessmentsObject['property_use']);
       case 'assessment_zone_id':
-        return _labelFor('property_zones', _assessment['zone']);
+        return _labelFor('property_zones', _assessmentsObject['zone']);
       case 'total_mast':
-        return _text(_assessment['no_of_mast']);
+        return _text(_assessmentsObject['no_of_mast']);
       case 'total_shops':
-        return _text(_assessment['no_of_shop']);
+        return _text(_assessmentsObject['no_of_shop']);
       case 'total_compound_house':
-        return _text(_assessment['no_of_compound_house']);
+        return _text(_assessmentsObject['no_of_compound_house']);
       case 'compound_name':
-        return _text(_assessment['compound_name']);
+        return _text(_assessmentsObject['compound_name']);
       case 'gated_community':
-        return _text(_assessment['gated_community']);
+        final dynamic gated = _assessmentsObject['gated_community'];
+        if (gated == null) return '—';
+        return gated.toString() == '0' ? 'No' : (gated.toString() == '1' ? 'Yes' : gated.toString());
       case 'swimming_pool':
-        return _labelFor('swimmings', _assessment['swimming_id']);
+        return _labelFor('swimmings', _assessmentsObject['swimming_id'] ?? _assessmentsObject['swimming_pool']);
       default:
         if (key.startsWith('registry_point')) {
           final String idx = key.replaceFirst('registry_point', '');
@@ -432,13 +486,70 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           ],
         );
       case 2:
+        // Get occupancy types for chips display
+        List<String> _getOccupancyTypes() {
+          if (_occupancies.isEmpty) return [];
+          return _occupancies
+              .whereType<Map>()
+              .map((e) => e['occupancy_type']?.toString())
+              .where((e) => e != null && e.isNotEmpty)
+              .toList()
+              .cast<String>();
+        }
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionCard(
               title: 'Occupancy Types',
               children: [
-                _KV('Selected Types', _formValue('occupancy_type')),
+                // Enhanced Selected Types with chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 160,
+                        child: Text(
+                          'Selected Types',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _getOccupancyTypes().map((type) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: Colors.green.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                type,
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 _KV('Tenant Title', _formValue('tenant_ownerTitle_id')),
                 _KV('Tenant First Name', _formValue('occupancy_tenant_first_name')),
                 _KV('Tenant Middle Name', _formValue('occupancy_middle_name')),
@@ -471,28 +582,102 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                   itemCount: 8,
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 4,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 2.2,
                   ),
                   itemBuilder: (context, index) {
                     final int p = index + 1;
-                    return TextFormField(
-                      readOnly: true,
-                      initialValue: _formValue('registry_point$p'),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.green),
+                    final String pointValue = _formValue('registry_point$p');
+                    final bool hasValue = pointValue.isNotEmpty && pointValue != '—';
+                    
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: hasValue 
+                            ? Colors.green.withOpacity(0.05)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: hasValue 
+                              ? Colors.green.withOpacity(0.3)
+                              : Colors.grey.shade300,
+                          width: 1.5,
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.green),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: BorderSide(color: Colors.green, width: 2),
-                        ),
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        labelText: 'Point',
+                        boxShadow: hasValue
+                            ? [
+                                BoxShadow(
+                                  color: Colors.green.withOpacity(0.1),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: hasValue 
+                                      ? Colors.green
+                                      : Colors.grey.shade400,
+                                  shape: BoxShape.circle,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  '$p',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Point $p',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                    color: hasValue 
+                                        ? Colors.green.shade700
+                                        : Colors.grey.shade600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (hasValue) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              pointValue,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade700,
+                                fontFamily: 'monospace',
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Not set',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade500,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     );
                   },
@@ -502,17 +687,54 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           ],
         );
       default:
+        // Helper to get labels for categories, types, and values_added
+        String _getCategoriesLabels() {
+          final List<dynamic>? categories = _assessmentsObject['categories'] as List?;
+          if (categories == null || categories.isEmpty) return '—';
+          final labels = categories
+              .whereType<Map>()
+              .map((e) => e['label']?.toString())
+              .where((e) => e != null && e.isNotEmpty)
+              .toList();
+          return labels.isEmpty ? '—' : labels.join(', ');
+        }
+        
+        String _getTypesLabels() {
+          final List<dynamic>? types = _assessmentsObject['types'] as List?;
+          if (types == null || types.isEmpty) return '—';
+          final labels = types
+              .whereType<Map>()
+              .map((e) => e['label']?.toString())
+              .where((e) => e != null && e.isNotEmpty)
+              .toList();
+          return labels.isEmpty ? '—' : labels.join(', ');
+        }
+        
+        String _getValuesAddedLabels() {
+          final List<dynamic>? valuesAdded = _assessmentsObject['values_added'] as List?;
+          if (valuesAdded == null || valuesAdded.isEmpty) return '—';
+          final labels = valuesAdded
+              .whereType<Map>()
+              .map((e) => e['label']?.toString())
+              .where((e) => e != null && e.isNotEmpty)
+              .toList();
+          return labels.isEmpty ? '—' : labels.join(', ');
+        }
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _SectionCard(
               title: 'Summary',
               children: [
+                _KV('Property Categories', _getCategoriesLabels()),
+                _KV('Property Types', _getTypesLabels()),
                 _KV('Wall Material', _formValue('assessment_wall_materials_id')),
                 _KV('Roof Material', _formValue('assessment_roofs_materials_id')),
                 _KV('Window Type', _formValue('assessment_window_type_id')),
                 _KV('Length', _formValue('assessment_length')),
                 _KV('Breadth', _formValue('assessment_breadth')),
+                _KV('Value Added', _getValuesAddedLabels()),
                 _KV('Property Use', _formValue('assessment_use_id')),
                 _KV('Property Zone', _formValue('assessment_zone_id')),
                 _KV('No of Masts', _formValue('total_mast')),
@@ -522,13 +744,13 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 _KV('Gated Community', _formValue('gated_community')),
                 _KV('Swimming Pool', _formValue('swimming_pool')),
                 // Extra financials for quick context
-                _KV('Mill rate', _text(_assessment['mill_rate'])),
-                _KV('Current year amount', _text(_assessment['current_year_assessment_amount'])),
-                _KV('Rate without GST', _text(_assessment['property_rate_without_gst'])),
-                _KV('Rate with GST', _text(_assessment['property_rate_with_gst'])),
-                _KV('GST', _text(_assessment['property_gst'])),
-                _KV('Due', _text(_assessment['due'])),
-                _KV('Balance', _text(_assessment['balance'])),
+                _KV('Mill rate', _text(_assessmentsObject['mill_rate'])),
+                _KV('Current year amount', _text(_assessmentsObject['current_year_assessment_amount'])),
+                _KV('Rate without GST', _text(_assessmentsObject['property_rate_without_gst'])),
+                _KV('Rate with GST', _text(_assessmentsObject['property_rate_with_gst'])),
+                _KV('GST', _text(_assessmentsObject['property_gst'])),
+                _KV('Due', _text(_assessmentsObject['due'])),
+                _KV('Balance', _text(_assessmentsObject['balance'])),
               ],
             ),
           ],

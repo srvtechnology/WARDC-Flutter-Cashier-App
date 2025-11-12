@@ -25,28 +25,9 @@ class PropertyListView extends StatelessWidget {
         }
 
         if (controller.errorMessage.value.isNotEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red[300],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: ${controller.errorMessage.value}',
-                  style: TextStyle(color: Colors.red[700]),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => controller.refreshProperties(),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
+          return _ErrorView(
+            errorMessage: controller.errorMessage.value,
+            onRetry: () => controller.refreshProperties(),
           );
         }
 
@@ -153,6 +134,227 @@ class PropertyListView extends StatelessWidget {
           }
         },
         child: const Icon(Icons.add, size: 28),
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({
+    required this.errorMessage,
+    required this.onRetry,
+  });
+
+  final String errorMessage;
+  final VoidCallback onRetry;
+
+  String _getErrorTitle() {
+    final msg = errorMessage.toLowerCase();
+    if (msg.contains('timeout') || msg.contains('timed out')) {
+      return 'Connection Timeout';
+    }
+    if (msg.contains('internet') || msg.contains('network') || msg.contains('connection')) {
+      return 'No Internet Connection';
+    }
+    if (msg.contains('server') || msg.contains('500') || msg.contains('502') || msg.contains('503')) {
+      return 'Server Error';
+    }
+    if (msg.contains('404') || msg.contains('not found')) {
+      return 'Resource Not Found';
+    }
+    if (msg.contains('401') || msg.contains('403') || msg.contains('unauthorized') || msg.contains('forbidden')) {
+      return 'Authentication Error';
+    }
+    return 'Something Went Wrong';
+  }
+
+  String _getErrorDescription() {
+    final msg = errorMessage.toLowerCase();
+    if (msg.contains('timeout') || msg.contains('timed out')) {
+      return 'The request took too long to complete. Please check your connection and try again.';
+    }
+    if (msg.contains('internet') || msg.contains('network') || msg.contains('connection')) {
+      return 'Please check your internet connection and ensure you have a stable network.';
+    }
+    if (msg.contains('server') || msg.contains('500') || msg.contains('502') || msg.contains('503')) {
+      return 'Our servers are experiencing issues. Please try again in a few moments.';
+    }
+    if (msg.contains('404') || msg.contains('not found')) {
+      return 'The requested resource could not be found. It may have been moved or deleted.';
+    }
+    if (msg.contains('401') || msg.contains('403') || msg.contains('unauthorized') || msg.contains('forbidden')) {
+      return 'You don\'t have permission to access this resource. Please sign in again.';
+    }
+    return 'We encountered an unexpected error while loading your properties. Please try again.';
+  }
+
+  IconData _getErrorIcon() {
+    final msg = errorMessage.toLowerCase();
+    if (msg.contains('timeout') || msg.contains('timed out')) {
+      return Icons.timer_off_outlined;
+    }
+    if (msg.contains('internet') || msg.contains('network') || msg.contains('connection')) {
+      return Icons.wifi_off_outlined;
+    }
+    if (msg.contains('server') || msg.contains('500') || msg.contains('502') || msg.contains('503')) {
+      return Icons.cloud_off_outlined;
+    }
+    if (msg.contains('404') || msg.contains('not found')) {
+      return Icons.search_off_outlined;
+    }
+    if (msg.contains('401') || msg.contains('403') || msg.contains('unauthorized') || msg.contains('forbidden')) {
+      return Icons.lock_outline;
+    }
+    return Icons.error_outline_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final errorTitle = _getErrorTitle();
+    final errorDescription = _getErrorDescription();
+    final errorIcon = _getErrorIcon();
+
+    return SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Error Icon Container
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  errorIcon,
+                  size: 64,
+                  color: Colors.red.shade400,
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Error Title
+              Text(
+                errorTitle,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade900,
+                  letterSpacing: -0.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              
+              // Error Description
+              Text(
+                errorDescription,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade600,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              
+              // Error Details Card
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 24),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.grey.shade200,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      color: Colors.grey.shade600,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Error Details',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey.shade800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            errorMessage,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Retry Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                  label: const Text(
+                    'Try Again',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Secondary Action
+              TextButton(
+                onPressed: () {
+                  // Optionally navigate back or show more options
+                  Get.back();
+                },
+                child: Text(
+                  'Go Back',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
