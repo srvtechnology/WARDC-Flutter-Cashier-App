@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
+import '../../services/toast_service.dart';
 
 class EditGeoView extends StatefulWidget {
   const EditGeoView({super.key, required this.property});
@@ -97,7 +98,7 @@ class _EditGeoViewState extends State<EditGeoView> {
         _dorLatLongController.text = latLng;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to get location: $e');
+      ToastService.showError('Failed to get location: $e');
     }
   }
 
@@ -223,17 +224,11 @@ class _EditGeoViewState extends State<EditGeoView> {
         meterData: meterData.isNotEmpty ? meterData : null,
       );
 
-      Get.snackbar('Success', 'Geo location information updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white);
+      ToastService.showSuccess('Geo location information updated successfully');
       
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update geo location: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      ToastService.showError('Failed to update geo location: $e');
     } finally {
       setState(() => _isLoading = false);
     }

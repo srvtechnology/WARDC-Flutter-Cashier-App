@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
+import '../../services/toast_service.dart';
 
 class EditOccupancyView extends StatefulWidget {
   const EditOccupancyView({super.key, required this.property});
@@ -90,10 +91,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedTypes.isEmpty) {
-      Get.snackbar('Error', 'Please select at least one occupancy type',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      ToastService.showError('Please select at least one occupancy type');
       return;
     }
 
@@ -113,17 +111,11 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
 
       await _propertyService.updateOccupancy(payload: payload);
 
-      Get.snackbar('Success', 'Occupancy information updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white);
+      ToastService.showSuccess('Occupancy information updated successfully');
       
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update occupancy: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      ToastService.showError('Failed to update occupancy: $e');
     } finally {
       setState(() => _isLoading = false);
     }

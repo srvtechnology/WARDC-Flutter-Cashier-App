@@ -446,11 +446,36 @@ class _PropertyListItem extends StatelessWidget {
     final prop = _propertyMap;
     if (prop == null) return 'Unknown';
     
-    final String? firstName = prop['landlord_first_name']?.toString() ?? 
+    // Try to get landlord from nested 'landlord' map first
+    final dynamic landlordRaw = prop['landlord'];
+    Map<String, dynamic>? landlord;
+    if (landlordRaw is Map) {
+      landlord = Map<String, dynamic>.from(landlordRaw);
+    }
+    
+    // Also check for organization name if it's an organization
+    if (landlord != null) {
+      final bool isOrganization = landlord['is_organization'] == true || 
+                                  landlord['is_organization'] == 1 ||
+                                  landlord['is_organization'] == '1';
+      
+      if (isOrganization) {
+        final String? orgName = landlord['organization_name']?.toString();
+        if (orgName != null && orgName.isNotEmpty) {
+          return orgName;
+        }
+      }
+    }
+    
+    // Get name parts from nested landlord map or direct property fields
+    final String? firstName = landlord?['first_name']?.toString() ?? 
+                              prop['landlord_first_name']?.toString() ?? 
                               prop['first_name']?.toString();
-    final String? middleName = prop['landlord_middle_name']?.toString() ?? 
+    final String? middleName = landlord?['middle_name']?.toString() ?? 
+                               prop['landlord_middle_name']?.toString() ?? 
                                prop['middle_name']?.toString();
-    final String? surname = prop['landlord_surname']?.toString() ?? 
+    final String? surname = landlord?['surname']?.toString() ?? 
+                            prop['landlord_surname']?.toString() ?? 
                             prop['surname']?.toString() ?? 
                             prop['last_name']?.toString();
     
@@ -463,8 +488,12 @@ class _PropertyListItem extends StatelessWidget {
       return nameParts.join(' ');
     }
     
-    return prop['landlord_name']?.toString() ?? 
+    // Fallback to other possible fields
+    return landlord?['landlord_name']?.toString() ?? 
+           prop['landlord_name']?.toString() ?? 
+           landlord?['owner_name']?.toString() ??
            prop['owner_name']?.toString() ?? 
+           landlord?['name']?.toString() ??
            prop['name']?.toString() ?? 
            'Unknown';
   }

@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:map_launcher/map_launcher.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
+import '../../services/toast_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   const PropertyDetailsView({super.key, required this.property});
@@ -260,7 +261,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       final List<String> parts = cleanCoords.split(',');
 
       if (parts.length != 2) {
-        Get.snackbar('Error', 'Invalid coordinates format');
+        ToastService.showError('Invalid coordinates format');
         return;
       }
 
@@ -268,7 +269,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       final double? lng = double.tryParse(parts[1]);
 
       if (lat == null || lng == null) {
-        Get.snackbar('Error', 'Invalid coordinates format');
+        ToastService.showError('Invalid coordinates format');
         return;
       }
 
@@ -345,13 +346,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       }
 
       if (!launched) {
-        Get.snackbar(
-          'Error',
-          'Could not open maps. Please ensure a map application is installed.',
-        );
+        ToastService.showError('Could not open maps. Please ensure a map application is installed.');
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to open map: ${e.toString()}');
+      ToastService.showError('Failed to open map: ${e.toString()}');
     }
   }
 

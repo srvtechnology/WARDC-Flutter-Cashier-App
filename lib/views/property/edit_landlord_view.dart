@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
+import '../../services/toast_service.dart';
 
 class EditLandlordView extends StatefulWidget {
   const EditLandlordView({super.key, required this.property});
@@ -106,7 +107,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
       });
     } catch (e) {
       setState(() => _loadingVars = false);
-      Get.snackbar('Error', 'Failed to load form options: $e');
+      ToastService.showError('Failed to load form options: $e');
     }
   }
 
@@ -149,17 +150,11 @@ class _EditLandlordViewState extends State<EditLandlordView> {
 
       await _propertyService.updateLandlord(payload: payload);
 
-      Get.snackbar('Success', 'Landlord information updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white);
+      ToastService.showSuccess('Landlord information updated successfully');
       
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update landlord: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      ToastService.showError('Failed to update landlord: $e');
     } finally {
       setState(() => _isLoading = false);
     }

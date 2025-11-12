@@ -2,43 +2,30 @@
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../services/toast_service.dart';
 
 /// Helper functions for common operations
 class Helpers {
   Helpers._();
 
-  /// Show success snackbar
-  static void showSuccess(String message) {
-    Get.snackbar(
-      'Success',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Get.theme.colorScheme.secondary,
-      colorText: Get.theme.colorScheme.onSecondary,
-      duration: const Duration(seconds: 2),
-    );
+  /// Show success toast
+  static void showSuccess(String message, {String? title}) {
+    ToastService.showSuccess(message, title: title);
   }
 
-  /// Show error snackbar
-  static void showError(String message) {
-    Get.snackbar(
-      'Error',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Get.theme.colorScheme.error,
-      colorText: Get.theme.colorScheme.onError,
-      duration: const Duration(seconds: 3),
-    );
+  /// Show error toast
+  static void showError(String message, {String? title}) {
+    ToastService.showError(message, title: title);
   }
 
-  /// Show info snackbar
-  static void showInfo(String message) {
-    Get.snackbar(
-      'Info',
-      message,
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-    );
+  /// Show info toast
+  static void showInfo(String message, {String? title}) {
+    ToastService.showInfo(message, title: title);
+  }
+
+  /// Show warning toast
+  static void showWarning(String message, {String? title}) {
+    ToastService.showWarning(message, title: title);
   }
 
   /// Show loading dialog

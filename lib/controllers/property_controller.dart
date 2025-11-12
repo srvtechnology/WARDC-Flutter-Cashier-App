@@ -7,6 +7,7 @@ import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/property_models.dart';
 import '../services/property_service.dart';
+import '../services/toast_service.dart';
 
 class PropertyController extends GetxController {
   final RxInt step = 0.obs; // 0..4
@@ -315,7 +316,7 @@ class PropertyController extends GetxController {
 
   Future<void> submit() async {
     if (!_validateCurrent()) {
-      Get.snackbar('Validation Error', 'Please fill all required fields');
+      ToastService.showError('Please fill all required fields', title: 'Validation Error');
       return;
     }
 
@@ -343,7 +344,7 @@ class PropertyController extends GetxController {
       if (response['success'] == true) {
         final String message = response['message']?.toString() ?? 
             'Property saved successfully';
-        Get.snackbar('Success', message);
+        ToastService.showSuccess(message);
 
         // Reset local state so next create starts fresh
         _resetFormState();
@@ -353,11 +354,11 @@ class PropertyController extends GetxController {
       } else {
         final String errorMsg = response['message']?.toString() ?? 
             'Failed to save property';
-        Get.snackbar('Failed', errorMsg);
+        ToastService.showError(errorMsg, title: 'Failed');
       }
     } catch (e) {
       Get.log('Property submission error: $e');
-      Get.snackbar('Error', e.toString());
+      ToastService.showError(e.toString());
     } finally {
       isSubmitting.value = false;
     }

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
+import '../../services/toast_service.dart';
 
 class EditAssessmentView extends StatefulWidget {
   const EditAssessmentView({super.key, required this.property});
@@ -247,17 +248,11 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         assessmentImage2Path: _assessmentImage2Path,
       );
 
-      Get.snackbar('Success', 'Assessment information updated successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white);
+      ToastService.showSuccess('Assessment information updated successfully');
       
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update assessment: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      ToastService.showError('Failed to update assessment: $e');
     } finally {
       setState(() => _isLoading = false);
     }

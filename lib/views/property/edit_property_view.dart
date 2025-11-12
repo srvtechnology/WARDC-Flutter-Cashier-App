@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
+import '../../services/toast_service.dart';
 
 class EditPropertyView extends StatefulWidget {
   const EditPropertyView({super.key, required this.property});
@@ -198,23 +199,11 @@ class _EditPropertyViewState extends State<EditPropertyView> {
       // ignore: avoid_print
       print('==================================\n');
 
-      Get.snackbar(
-        'Success',
-        'Property information updated successfully',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      ToastService.showSuccess('Property information updated successfully');
 
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to update property: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      ToastService.showError('Failed to update property: $e');
     } finally {
       setState(() => _isLoading = false);
     }

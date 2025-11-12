@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../routes/app_pages.dart';
 import '../services/auth_service.dart';
+import '../services/toast_service.dart';
 
 class AuthController extends GetxController {
   final GlobalKey<FormState> formKey = GlobalKey<FormState>();
@@ -48,10 +49,9 @@ class AuthController extends GetxController {
         Get.offAllNamed(Routes.cashierDashboard);
       }
     } on AuthException catch (e) {
-      Get.snackbar('Login failed', e.message, snackPosition: SnackPosition.BOTTOM);
+      ToastService.showError(e.message, title: 'Login failed');
     } catch (e) {
-      Get.snackbar('Login failed', 'Unexpected error occurred',
-          snackPosition: SnackPosition.BOTTOM);
+      ToastService.showError('Unexpected error occurred', title: 'Login failed');
     } finally {
       isLoading.value = false;
     }
