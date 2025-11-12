@@ -178,9 +178,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
         'is_draft_delivered': _isDraftDelivered ?? '0',
         'delivered_name': _controllers['delivered_name']!.text.trim(),
         'delivered_number': _controllers['delivered_number']!.text.trim(),
-        'property_inaccessable': _propertyInaccessible != null
-            ? [_propertyInaccessible]
-            : [],
+        'property_inaccessable': _propertyInaccessible ?? '',
       };
 
       // Log the payload before submission

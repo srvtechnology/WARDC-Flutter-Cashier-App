@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart' show Get;
@@ -404,9 +405,8 @@ class PropertyService {
       if (value == null) return;
       if (value is List) {
         // Handle arrays like property_categories, property_types, etc.
-        for (final v in value) {
-          formData.fields.add(MapEntry('${key}[]', v.toString()));
-        }
+        // Send as JSON-encoded array string instead of multiple fields
+        formData.fields.add(MapEntry(key, jsonEncode(value)));
       } else {
         formData.fields.add(MapEntry(key, value.toString()));
       }
