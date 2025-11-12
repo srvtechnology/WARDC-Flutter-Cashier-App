@@ -15,9 +15,173 @@ class PropertyDetailsView extends StatefulWidget {
 class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   final RxInt _step = 0.obs;
 
+  // Storage base URL for images
+  static const String _storageBaseUrl =
+      'http://13.232.84.109/apis/storage/app/public/';
+
   Map<String, dynamic> get prop => widget.property;
 
   String _text(dynamic v) => v?.toString() ?? '—';
+
+  String _getImageUrl(String? imagePath) {
+    if (imagePath == null || imagePath.isEmpty || imagePath == '—') {
+      return '';
+    }
+    // Remove leading slash if present
+    final String cleanPath = imagePath.startsWith('/')
+        ? imagePath.substring(1)
+        : imagePath;
+    return '$_storageBaseUrl$cleanPath';
+  }
+
+  Widget _buildImageDisplay(String imagePath) {
+    if (imagePath.isEmpty || imagePath == '—') {
+      return Text(
+        'No image available',
+        style: TextStyle(
+          color: Colors.grey.shade500,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    final String imageUrl = _getImageUrl(imagePath);
+
+    return GestureDetector(
+      onTap: () {
+        // Show full screen image on tap
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 8),
+                              Text('Failed to load image'),
+                            ],
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.black54,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey.shade200,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.broken_image,
+                      color: Colors.grey.shade400,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Failed to load',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                color: Colors.grey.shade100,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
   Map<String, dynamic> get _landlord =>
@@ -37,6 +201,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   List<dynamic> get _occupancies => (prop['occupancies'] as List?) ?? const [];
   List<dynamic> get _propertyInaccessible =>
       (prop['property_inaccessible'] as List?) ?? const [];
+  List<dynamic> get _registryMeters =>
+      (prop['registry_meters'] as List?) ?? const [];
 
   @override
   void initState() {
@@ -405,6 +571,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           _assessmentsObject['swimming_id'] ??
               _assessmentsObject['swimming_pool'],
         );
+      case 'assessment_images_1':
+        return _text(_assessmentsObject['assessment_images_1']);
+      case 'assessment_images_2':
+        return _text(_assessmentsObject['assessment_images_2']);
       default:
         if (key.startsWith('registry_point')) {
           final String idx = key.replaceFirst('registry_point', '');
@@ -585,7 +755,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             _SectionCard(
               title: 'Delivery',
               children: [
-                _KV('Delivery Proof Image', _formValue('delivered_image')),
+                // Delivery Proof Image with actual image display
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 160,
+                        child: Text(
+                          'Delivery Proof Image',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildImageDisplay(
+                          _formValue('delivered_image'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 _KV(
                   'Is Draft Delivered?',
                   _formValue('is_draft_delivered') == '1' ? 'Yes' : 'No',
@@ -851,6 +1042,91 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 ),
               ],
             ),
+            if (_registryMeters.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Meters',
+                children: [
+                  Column(
+                    children: [
+                      for (int i = 0; i < _registryMeters.length; i++)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            bottom: i < _registryMeters.length - 1 ? 16 : 0,
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.25),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Meter ${i + 1}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _KV(
+                                  'Meter Number',
+                                  _text(
+                                    (_registryMeters[i] as Map?)?['number'],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                // Meter Image
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SizedBox(
+                                        width: 160,
+                                        child: Text(
+                                          'Meter Image',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: _buildImageDisplay(
+                                          _text(
+                                            (_registryMeters[i]
+                                                as Map?)?['image'],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
           ],
         );
       default:
@@ -935,6 +1211,57 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 _KV('GST', _text(_assessmentsObject['property_gst'])),
                 _KV('Due', _text(_assessmentsObject['due'])),
                 _KV('Balance', _text(_assessmentsObject['balance'])),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'Property Images',
+              children: [
+                // Assessment Image 1
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 160,
+                        child: Text(
+                          'Assessment Image 1',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildImageDisplay(
+                          _formValue('assessment_images_1'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Assessment Image 2
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 160,
+                        child: Text(
+                          'Assessment Image 2',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildImageDisplay(
+                          _formValue('assessment_images_2'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
