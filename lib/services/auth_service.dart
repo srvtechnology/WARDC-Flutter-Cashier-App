@@ -25,6 +25,7 @@ class AuthService {
 
   static const String _kTokenKey = 'auth_token';
   static const String _kUserTypeKey = 'user_type';
+  static const String _kUserEmailKey = 'user_email';
 
   final Dio _dio;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -59,7 +60,7 @@ class AuthService {
       }
 
       final String token = body['token'] as String;
-      await _storeAuth(token: token, type: type);
+      await _storeAuth(token: token, type: type, email: email);
       return token;
     } on DioException catch (e) {
       throw AuthException(_mapDioError(e));
@@ -77,6 +78,7 @@ class AuthService {
       await _secureStorage.delete(key: _kTokenKey);
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kUserTypeKey);
+      await prefs.remove(_kUserEmailKey);
       // Optionally clear local drafts when logging out
       try {
         // Lazily import Hive to avoid hard dependency here
@@ -119,9 +121,15 @@ class AuthService {
     }
   }
 
+  Future<String?> getSavedUserEmail() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kUserEmailKey);
+  }
+
   Future<void> _storeAuth({
     required String token,
     required UserType type,
+    required String email,
   }) async {
     await _secureStorage.write(key: _kTokenKey, value: token);
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -129,6 +137,7 @@ class AuthService {
       _kUserTypeKey,
       type == UserType.assessmentOfficer ? 'assessment_officer' : 'cashier',
     );
+    await prefs.setString(_kUserEmailKey, email);
   }
 
   Map<String, dynamic> _asJson(dynamic data) {

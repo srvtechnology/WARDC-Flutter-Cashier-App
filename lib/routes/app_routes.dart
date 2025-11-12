@@ -17,5 +17,6 @@ abstract class Routes {
   static const editOccupancy = '/edit-occupancy';
   static const editGeo = '/edit-geo';
   static const editAssessment = '/edit-assessment';
+  static const userProfile = '/user-profile';
 }
 

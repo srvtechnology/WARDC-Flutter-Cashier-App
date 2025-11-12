@@ -14,6 +14,7 @@ import '../views/property/edit_property_view.dart';
 import '../views/property/edit_occupancy_view.dart';
 import '../views/property/edit_geo_view.dart';
 import '../views/property/edit_assessment_view.dart';
+import '../views/profile/user_profile_view.dart';
 
 part 'app_routes.dart';
 
@@ -83,6 +84,10 @@ class AppPages {
         final property = Get.arguments as Map<String, dynamic>;
         return EditAssessmentView(property: property);
       },
+    ),
+    GetPage(
+      name: Routes.userProfile,
+      page: () => const UserProfileView(),
     ),
   ];
 }

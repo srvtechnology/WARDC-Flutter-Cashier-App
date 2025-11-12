@@ -6,20 +6,19 @@ import 'property_wizard_view.dart';
 import 'property_details_view.dart';
 
 class PropertyListView extends StatelessWidget {
-  const PropertyListView({super.key, this.actions});
+  const PropertyListView({
+    super.key,
+    this.actions,
+    this.appBar,
+    this.useScaffold = true,
+  });
 
   final List<Widget>? actions;
+  final PreferredSizeWidget? appBar;
+  final bool useScaffold;
 
-  @override
-  Widget build(BuildContext context) {
-    final PropertyListController controller = Get.put(PropertyListController());
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Properties'),
-        actions: actions,
-      ),
-      body: Obx(() {
+  Widget _buildBody(PropertyListController controller) {
+    return Obx(() {
         if (controller.isLoading.value && controller.properties.isEmpty) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -123,19 +122,45 @@ class PropertyListView extends StatelessWidget {
             ],
           ),
         );
-      }),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.green,
-        onPressed: () async {
-          Get.put(PropertyController());
-          final result = await Get.to(() => const PropertyWizardView());
-          if (result == true) {
-            await controller.refreshProperties();
-          }
-        },
-        child: const Icon(Icons.add, size: 28),
-      ),
+      });
+  }
+
+  Widget _buildFloatingActionButton(PropertyListController controller) {
+    return FloatingActionButton(
+      backgroundColor: Colors.green,
+      onPressed: () async {
+        Get.put(PropertyController());
+        final result = await Get.to(() => const PropertyWizardView());
+        if (result == true) {
+          await controller.refreshProperties();
+        }
+      },
+      child: const Icon(Icons.add, size: 28),
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final PropertyListController controller = Get.put(PropertyListController());
+
+    final body = _buildBody(controller);
+    final fab = _buildFloatingActionButton(controller);
+    final defaultAppBar = AppBar(
+      title: const Text('Properties'),
+      actions: actions,
+    );
+    final preferredAppBar = appBar ?? defaultAppBar;
+
+    if (useScaffold) {
+      return Scaffold(
+        appBar: preferredAppBar,
+        body: body,
+        floatingActionButton: fab,
+      );
+    } else {
+      // When not using Scaffold, return body only (parent handles AppBar and FAB)
+      return body;
+    }
   }
 }
 
