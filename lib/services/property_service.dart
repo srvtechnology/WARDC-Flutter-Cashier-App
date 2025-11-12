@@ -181,6 +181,288 @@ class PropertyService {
     return <String, dynamic>{};
   }
 
+  // Dio instance for update APIs - uses same base URL as main API
+  final dio.Dio _updateDio = dio.Dio(
+    dio.BaseOptions(
+      baseUrl: ApiConfig.baseUrl,
+      contentType: ApiConfig.contentType,
+      connectTimeout: ApiConfig.timeout,
+      receiveTimeout: ApiConfig.timeout,
+    ),
+  );
+
+  Future<Map<String, dynamic>> updateLandlord({
+    required Map<String, dynamic> payload,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    try {
+      final dio.Response<dynamic> res = await _updateDio.post(
+        '/landloard/update',
+        data: payload,
+        options: options,
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Landlord update failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProperty({
+    required Map<String, dynamic> fields,
+    String? deliveredImagePath,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.FormData formData = dio.FormData();
+
+    // Add all fields
+    fields.forEach((key, value) {
+      if (value == null) return;
+      if (value is List) {
+        for (final v in value) {
+          formData.fields.add(MapEntry('${key}[]', v.toString()));
+        }
+      } else {
+        formData.fields.add(MapEntry(key, value.toString()));
+      }
+    });
+
+    // Delivered proof image (optional)
+    if (deliveredImagePath != null &&
+        deliveredImagePath.isNotEmpty &&
+        File(deliveredImagePath).existsSync()) {
+      formData.files.add(
+        MapEntry(
+          'delivered_image',
+          await dio.MultipartFile.fromFile(
+            deliveredImagePath,
+            filename: _fileName(deliveredImagePath),
+          ),
+        ),
+      );
+    }
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      contentType: 'multipart/form-data',
+    );
+
+    try {
+      final dio.Response<dynamic> res = await _updateDio.post(
+        '/property/update',
+        data: formData,
+        options: options,
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Property update failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateOccupancy({
+    required Map<String, dynamic> payload,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    try {
+      final dio.Response<dynamic> res = await _updateDio.post(
+        '/occupency/update',
+        data: payload,
+        options: options,
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Occupancy update failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateGeoLocation({
+    required Map<String, dynamic> fields,
+    List<Map<String, dynamic>>? meterData,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.FormData formData = dio.FormData();
+
+    // Add all fields
+    fields.forEach((key, value) {
+      if (value == null || value.toString().isEmpty) return;
+      formData.fields.add(MapEntry(key, value.toString()));
+    });
+
+    // Handle meter data
+    if (meterData != null) {
+      for (int i = 0; i < meterData.length; i++) {
+        final Map<String, dynamic> meter = meterData[i];
+        
+        // Existing meter (has id)
+        if (meter.containsKey('id')) {
+          formData.fields.add(MapEntry('meterData[$i][id]', meter['id'].toString()));
+          formData.fields.add(MapEntry('meterData[$i][property_id]', meter['property_id'].toString()));
+          formData.fields.add(MapEntry('meterData[$i][number]', meter['number'].toString()));
+          
+          // If image is a file path (new image), upload it
+          if (meter.containsKey('imageFile') && meter['imageFile'] != null) {
+            final String imagePath = meter['imageFile'].toString();
+            if (File(imagePath).existsSync()) {
+              formData.files.add(
+                MapEntry(
+                  'meterData[$i][imageFile]',
+                  await dio.MultipartFile.fromFile(
+                    imagePath,
+                    filename: _fileName(imagePath),
+                  ),
+                ),
+              );
+            }
+          } else if (meter.containsKey('image') && meter['image'] != null) {
+            // Existing image URL/path (keep existing)
+            formData.fields.add(MapEntry('meterData[$i][image]', meter['image'].toString()));
+          }
+        } else {
+          // New meter (no id)
+          formData.fields.add(MapEntry('meterData[$i][number]', meter['number'].toString()));
+          
+          // Upload new image
+          if (meter.containsKey('imageFile') && meter['imageFile'] != null) {
+            final String imagePath = meter['imageFile'].toString();
+            if (File(imagePath).existsSync()) {
+              formData.files.add(
+                MapEntry(
+                  'meterData[$i][imageFile]',
+                  await dio.MultipartFile.fromFile(
+                    imagePath,
+                    filename: _fileName(imagePath),
+                  ),
+                ),
+              );
+            }
+          }
+        }
+      }
+    }
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      contentType: 'multipart/form-data',
+    );
+
+    try {
+      final dio.Response<dynamic> res = await _updateDio.post(
+        '/geolocation/update',
+        data: formData,
+        options: options,
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Geo location update failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
+  Future<Map<String, dynamic>> updateAssessment({
+    required Map<String, dynamic> fields,
+    String? assessmentImage1Path,
+    String? assessmentImage2Path,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.FormData formData = dio.FormData();
+
+    // Add all fields
+    fields.forEach((key, value) {
+      if (value == null) return;
+      if (value is List) {
+        // Handle arrays like property_categories, property_types, etc.
+        for (final v in value) {
+          formData.fields.add(MapEntry('${key}[]', v.toString()));
+        }
+      } else {
+        formData.fields.add(MapEntry(key, value.toString()));
+      }
+    });
+
+    // Assessment images
+    if (assessmentImage1Path != null &&
+        assessmentImage1Path.isNotEmpty &&
+        File(assessmentImage1Path).existsSync()) {
+      formData.files.add(
+        MapEntry(
+          'image1',
+          await dio.MultipartFile.fromFile(
+            assessmentImage1Path,
+            filename: _fileName(assessmentImage1Path),
+          ),
+        ),
+      );
+    }
+
+    if (assessmentImage2Path != null &&
+        assessmentImage2Path.isNotEmpty &&
+        File(assessmentImage2Path).existsSync()) {
+      formData.files.add(
+        MapEntry(
+          'image2',
+          await dio.MultipartFile.fromFile(
+            assessmentImage2Path,
+            filename: _fileName(assessmentImage2Path),
+          ),
+        ),
+      );
+    }
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      contentType: 'multipart/form-data',
+    );
+
+    try {
+      final dio.Response<dynamic> res = await _updateDio.post(
+        '/assessment/update',
+        data: formData,
+        options: options,
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Assessment update failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
   String _fileName(String path) => path.split('/').last;
 
   String _mapDioError(dio.DioException e) {
