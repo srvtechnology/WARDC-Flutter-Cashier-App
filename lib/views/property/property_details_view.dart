@@ -586,10 +586,39 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     return '—';
   }
 
-  @override
+  void _handleEdit() {
+    final int step = _step.value;
+    switch (step) {
+      case 0:
+        Get.toNamed(Routes.editLandlord, arguments: prop);
+        break;
+      case 1:
+        Get.toNamed(Routes.editProperty, arguments: prop);
+        break;
+      case 2:
+        Get.toNamed(Routes.editOccupancy, arguments: prop);
+        break;
+      case 3:
+        Get.toNamed(Routes.editGeo, arguments: prop);
+        break;
+      case 4:
+        Get.toNamed(Routes.editAssessment, arguments: prop);
+        break;
+    }
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Property Details')),
+      appBar: AppBar(
+        title: const Text('Property Details'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit, color: Colors.green),
+            onPressed: _handleEdit,
+            tooltip: 'Edit',
+          ),
+        ],
+      ),
       body: Obx(() {
         final int step = _step.value;
         return SafeArea(
@@ -689,10 +718,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
-              title: 'Type',
-              onEdit: () => Get.toNamed(Routes.editLandlord, arguments: prop),
-              children: [
+          _SectionCard(
+            title: 'Type',
+            children: [
                 _KV(
                   'Is Organization',
                   _formValue('is_organization') == '1' ? 'Yes' : 'No',
@@ -742,10 +770,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
-              title: 'Category Type',
-              onEdit: () => Get.toNamed(Routes.editProperty, arguments: prop),
-              children: [
+          _SectionCard(
+            title: 'Category Type',
+            children: [
                 _KV(
                   'Category Type',
                   _formValue('categoryType') == 'R'
@@ -841,7 +868,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           children: [
             _SectionCard(
               title: 'Occupancy Types',
-              onEdit: () => Get.toNamed(Routes.editOccupancy, arguments: prop),
               children: [
                 // Enhanced Selected Types with chips
                 Padding(
@@ -909,7 +935,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           children: [
             _SectionCard(
               title: 'Digital Address',
-              onEdit: () => Get.toNamed(Routes.editGeo, arguments: prop),
               children: [
                 _KV('Digital Address', _formValue('registry_digital_address')),
                 _KV('Dor Lat Long', _formValue('dor_lat_long')),
@@ -1176,7 +1201,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           children: [
             _SectionCard(
               title: 'Summary',
-              onEdit: () => Get.toNamed(Routes.editAssessment, arguments: prop),
               children: [
                 _KV('Property Categories', _getCategoriesLabels()),
                 _KV('Property Types', _getTypesLabels()),
@@ -1305,30 +1329,17 @@ class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
     required this.children,
-    this.onEdit,
   });
   final String title;
   final List<Widget> children;
-  final VoidCallback? onEdit;
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-            ),
-            if (onEdit != null)
-              IconButton(
-                icon: const Icon(Icons.edit, size: 20, color: Colors.green),
-                onPressed: onEdit,
-                tooltip: 'Edit',
-              ),
-          ],
+        Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
         ),
         const SizedBox(height: 8),
         Container(
