@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/input_formatters.dart';
+import '../../services/loading_service.dart';
 
 class EditPropertyView extends StatefulWidget {
   const EditPropertyView({super.key, required this.property});
@@ -19,7 +23,6 @@ class EditPropertyView extends StatefulWidget {
 class _EditPropertyViewState extends State<EditPropertyView> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
-  bool _isLoading = false;
   String? _deliveredImagePath;
   String? _categoryType;
   String? _isDraftDelivered;
@@ -161,7 +164,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    LoadingService.showLoading(message: 'Updating property...');
 
     try {
       final fields = <String, dynamic>{
@@ -205,7 +208,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
     } catch (e) {
       ToastService.showError('Failed to update property: $e');
     } finally {
-      setState(() => _isLoading = false);
+      LoadingService.hideLoading();
     }
   }
 
@@ -213,9 +216,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Property')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
+      body: Form(
               key: _formKey,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -242,10 +243,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                           value: _categoryType,
                           isExpanded: true,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) =>
-                              (v == null || v.toString().trim().isEmpty)
-                              ? 'Required'
-                              : null,
+                          validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Category Type'),
                           onChanged: (v) => setState(() => _categoryType = v),
                         ),
                       ],
@@ -295,6 +293,9 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                                   labelText: 'Recipient Number',
                                 ),
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [PhoneNumberFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                               ),
                             ),
                           ],
@@ -431,7 +432,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
+                        onPressed: _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -440,18 +441,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Text('Update Property'),
+                        child: const Text('Update Property'),
                       ),
                     ),
                   ],

@@ -1,11 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/input_formatters.dart';
+import '../../services/loading_service.dart';
 
 class EditGeoView extends StatefulWidget {
   const EditGeoView({super.key, required this.property});
@@ -19,7 +23,6 @@ class EditGeoView extends StatefulWidget {
 class _EditGeoViewState extends State<EditGeoView> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
-  bool _isLoading = false;
   final Map<String, TextEditingController> _pointControllers = {};
   final TextEditingController _digitalAddressController = TextEditingController();
   final TextEditingController _dorLatLongController = TextEditingController();
@@ -148,27 +151,11 @@ class _EditGeoViewState extends State<EditGeoView> {
     });
   }
 
-  String? _validateLatLong(String? v) {
-    if (v == null || v.trim().isEmpty) return 'Required';
-    final String trimmed = v.trim();
-    final List<String> parts = trimmed.split(',');
-    if (parts.length != 2) {
-      return 'Format: lat,long';
-    }
-    final double? lat = double.tryParse(parts[0].trim());
-    final double? lng = double.tryParse(parts[1].trim());
-    if (lat == null || lng == null) {
-      return 'Invalid coordinates';
-    }
-    if (lat < -90 || lat > 90) return 'Latitude must be -90 to 90';
-    if (lng < -180 || lng > 180) return 'Longitude must be -180 to 180';
-    return null;
-  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    LoadingService.showLoading(message: 'Updating geo location...');
 
     try {
       final fields = <String, dynamic>{
@@ -230,7 +217,7 @@ class _EditGeoViewState extends State<EditGeoView> {
     } catch (e) {
       ToastService.showError('Failed to update geo location: $e');
     } finally {
-      setState(() => _isLoading = false);
+      LoadingService.hideLoading();
     }
   }
 
@@ -238,9 +225,7 @@ class _EditGeoViewState extends State<EditGeoView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Geo Registry')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
+      body: Form(
               key: _formKey,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -264,7 +249,9 @@ class _EditGeoViewState extends State<EditGeoView> {
                                   ),
                                 ),
                                 readOnly: true,
-                                validator: _validateLatLong,
+                                inputFormatters: [CoordinateFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: ValidationUtils.validateLatLong,
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -308,7 +295,9 @@ class _EditGeoViewState extends State<EditGeoView> {
                                 ),
                               ),
                               keyboardType: TextInputType.text,
-                              validator: _validateLatLong,
+                              inputFormatters: [CoordinateFormatter()],
+                              autovalidateMode: AutovalidateMode.onUserInteraction,
+                              validator: ValidationUtils.validateLatLong,
                             );
                           },
                         ),
@@ -404,7 +393,7 @@ class _EditGeoViewState extends State<EditGeoView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
+                        onPressed: _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -413,16 +402,7 @@ class _EditGeoViewState extends State<EditGeoView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Geo Registry'),
+                        child: const Text('Update Geo Registry'),
                       ),
                     ),
                   ],

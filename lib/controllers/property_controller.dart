@@ -8,6 +8,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/property_models.dart';
 import '../services/property_service.dart';
 import '../services/toast_service.dart';
+import '../services/loading_service.dart';
+import '../routes/app_pages.dart';
+import 'property_list_controller.dart';
 
 class PropertyController extends GetxController {
   final RxInt step = 0.obs; // 0..4
@@ -323,6 +326,7 @@ class PropertyController extends GetxController {
     // Log step 5 (Assessment) payload before submission
     _printAssessmentPayload();
 
+    LoadingService.showLoading(message: 'Submitting property...');
     isSubmitting.value = true;
     try {
       // Merge and prepare all payload data from all steps
@@ -349,8 +353,18 @@ class PropertyController extends GetxController {
         // Reset local state so next create starts fresh
         _resetFormState();
 
-        // Go back to listing and signal success so it can auto-refresh
-        Get.back(result: true);
+        // Refresh property list if controller exists
+        try {
+          if (Get.isRegistered<PropertyListController>()) {
+            final PropertyListController listController = Get.find<PropertyListController>();
+            await listController.refreshProperties();
+          }
+        } catch (e) {
+          Get.log('Could not refresh property list: $e');
+        }
+
+        // Navigate to dashboard and clear navigation stack
+        Get.offAllNamed(Routes.assessmentDashboard);
       } else {
         final String errorMsg = response['message']?.toString() ?? 
             'Failed to save property';
@@ -361,6 +375,7 @@ class PropertyController extends GetxController {
       ToastService.showError(e.toString());
     } finally {
       isSubmitting.value = false;
+      LoadingService.hideLoading();
     }
   }
 

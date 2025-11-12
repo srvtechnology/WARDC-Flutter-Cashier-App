@@ -1,10 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/input_formatters.dart';
+import '../../services/loading_service.dart';
 
 class EditAssessmentView extends StatefulWidget {
   const EditAssessmentView({super.key, required this.property});
@@ -18,7 +22,6 @@ class EditAssessmentView extends StatefulWidget {
 class _EditAssessmentViewState extends State<EditAssessmentView> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
-  bool _isLoading = false;
   String? _assessmentImage1Path;
   String? _assessmentImage2Path;
 
@@ -196,7 +199,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    LoadingService.showLoading(message: 'Updating assessment...');
 
     try {
       // Prepare council adjustments JSON
@@ -254,7 +257,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     } catch (e) {
       ToastService.showError('Failed to update assessment: $e');
     } finally {
-      setState(() => _isLoading = false);
+      LoadingService.hideLoading();
     }
   }
 
@@ -262,9 +265,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Assessment')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
+      body: Form(
               key: _formKey,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -355,17 +356,45 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                           children: [
                             Expanded(
                               child: TextFormField(
+                                key: const ValueKey('length_field'),
                                 controller: _controllers['length'],
                                 decoration: _decoration.copyWith(labelText: 'length'),
                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) {
+                                  final breadthValue = _controllers['breadth']?.text;
+                                  final decimalError = ValidationUtils.validateDecimal(v, decimalPlaces: 2, isRequired: false);
+                                  if (decimalError != null) return decimalError;
+                                  return ValidationUtils.validateLengthGreaterThanBreadth(v, breadthValue);
+                                },
+                                onChanged: (v) {
+                                  // Trigger validation on breadth field when length changes
+                                  if (_formKey.currentState != null) {
+                                    _formKey.currentState!.validate();
+                                  }
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: TextFormField(
+                                key: const ValueKey('breadth_field'),
                                 controller: _controllers['breadth'],
                                 decoration: _decoration.copyWith(labelText: 'breadth'),
                                 keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) {
+                                  final lengthValue = _controllers['length']?.text;
+                                  return ValidationUtils.validateLengthGreaterThanBreadth(lengthValue, v);
+                                },
+                                onChanged: (v) {
+                                  // Trigger validation on length field when breadth changes
+                                  if (_formKey.currentState != null) {
+                                    _formKey.currentState!.validate();
+                                  }
+                                },
                               ),
                             ),
                           ],
@@ -448,6 +477,9 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                                   labelText: 'No of Masts',
                                 ),
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [IntegerInputFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -458,6 +490,9 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                                   labelText: 'No of Shops',
                                 ),
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [IntegerInputFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
                               ),
                             ),
                           ],
@@ -472,6 +507,9 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                                   labelText: 'No of Compound House',
                                 ),
                                 keyboardType: TextInputType.number,
+                                inputFormatters: [IntegerInputFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -520,7 +558,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
+                        onPressed: _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -529,16 +567,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Assessment'),
+                        child: const Text('Update Assessment'),
                       ),
                     ),
                   ],

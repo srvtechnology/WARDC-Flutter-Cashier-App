@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/input_formatters.dart';
+import '../../services/loading_service.dart';
 
 class EditLandlordView extends StatefulWidget {
   const EditLandlordView({super.key, required this.property});
@@ -16,7 +20,6 @@ class EditLandlordView extends StatefulWidget {
 class _EditLandlordViewState extends State<EditLandlordView> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
-  bool _isLoading = false;
   String _isOrganization = '0';
 
   // Form controllers
@@ -114,7 +117,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    LoadingService.showLoading(message: 'Updating landlord...');
 
     try {
       final payload = <String, dynamic>{
@@ -156,7 +159,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     } catch (e) {
       ToastService.showError('Failed to update landlord: $e');
     } finally {
-      setState(() => _isLoading = false);
+      LoadingService.hideLoading();
     }
   }
 
@@ -164,9 +167,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Landlord')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
+      body: Form(
               key: _formKey,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -221,9 +222,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                               labelText: 'First Name*',
                             ),
                             autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Required'
-                                : null,
+                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'First Name'),
                           ),
                               ),
                             ],
@@ -240,8 +239,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                             controller: _controllers['surname'],
                             decoration: _decoration.copyWith(labelText: 'Surname*'),
                             autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Required' : null,
+                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Surname'),
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
@@ -253,7 +251,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                             isExpanded: true,
                             value: _sex,
                             autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) => v == null ? 'Required' : null,
+                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Gender'),
                             onChanged: (v) => setState(() => _sex = v),
                           ),
                           const SizedBox(height: 12),
@@ -293,8 +291,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                                     labelText: 'Organization Name',
                                   ),
                                   autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                  validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Name'),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -305,8 +302,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                                     labelText: 'Organization Address',
                                   ),
                                   autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  validator: (v) =>
-                                      (v == null || v.trim().isEmpty) ? 'Required' : null,
+                                  validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Name'),
                                 ),
                               ),
                             ],
@@ -335,13 +331,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                           ),
                           keyboardType: TextInputType.emailAddress,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) {
-                            if (v == null || v.trim().isEmpty) return null;
-                            return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-                                    .hasMatch(v.trim())
-                                ? null
-                                : 'Enter a valid email';
-                          },
+                          validator: ValidationUtils.validateEmail,
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -352,23 +342,24 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                                 decoration: _decoration.copyWith(
                                   labelText: 'Mobile 1*',
                                 ),
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [PhoneNumberFormatter()],
                                 autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) return 'Required';
-                                  return RegExp(r'^\+?[0-9]{7,15}$').hasMatch(v.trim())
-                                      ? null
-                                      : 'Invalid number';
-                                },
+                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: true),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: TextFormField(
-                                controller: _controllers['mobile_2'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Mobile 2',
+                                child: TextFormField(
+                                  controller: _controllers['mobile_2'],
+                                  decoration: _decoration.copyWith(
+                                    labelText: 'Mobile 2',
+                                  ),
+                                  keyboardType: TextInputType.phone,
+                                  inputFormatters: [PhoneNumberFormatter()],
+                                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                                  validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                                 ),
-                              ),
                             ),
                           ],
                         ),
@@ -447,7 +438,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
+                        onPressed: _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -456,16 +447,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Landlord'),
+                        child: const Text('Update Landlord'),
                       ),
                     ),
                   ],

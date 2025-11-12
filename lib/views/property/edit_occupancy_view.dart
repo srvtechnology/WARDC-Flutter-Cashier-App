@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/input_formatters.dart';
+import '../../services/loading_service.dart';
 
 class EditOccupancyView extends StatefulWidget {
   const EditOccupancyView({super.key, required this.property});
@@ -16,7 +20,6 @@ class EditOccupancyView extends StatefulWidget {
 class _EditOccupancyViewState extends State<EditOccupancyView> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
-  bool _isLoading = false;
   final Set<String> _selectedTypes = <String>{};
   String? _tenantTitleId;
 
@@ -95,7 +98,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
       return;
     }
 
-    setState(() => _isLoading = true);
+    LoadingService.showLoading(message: 'Updating occupancy...');
 
     try {
       final payload = <String, dynamic>{
@@ -117,7 +120,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
     } catch (e) {
       ToastService.showError('Failed to update occupancy: $e');
     } finally {
-      setState(() => _isLoading = false);
+      LoadingService.hideLoading();
     }
   }
 
@@ -125,9 +128,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Occupancy')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Form(
+      body: Form(
               key: _formKey,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -174,6 +175,8 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                                 decoration: _decoration.copyWith(
                                   labelText: 'Tenant First Name',
                                 ),
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Tenant First Name'),
                               ),
                             ),
                           ],
@@ -213,6 +216,9 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                                   labelText: 'Mobile Number 1',
                                 ),
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [PhoneNumberFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -223,6 +229,9 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                                   labelText: 'Mobile Number 2',
                                 ),
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [PhoneNumberFormatter()],
+                                autovalidateMode: AutovalidateMode.onUserInteraction,
+                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                               ),
                             ),
                           ],
@@ -233,7 +242,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
+                        onPressed: _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -242,16 +251,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Occupancy'),
+                        child: const Text('Update Occupancy'),
                       ),
                     ),
                   ],

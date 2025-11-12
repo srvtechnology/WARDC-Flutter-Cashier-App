@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
 
       // Theme Configuration
       theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      darkTheme: AppTheme.light(),
       themeMode: ThemeMode
           .system, // Can be changed to ThemeMode.light or ThemeMode.dark
       // Routing Configuration

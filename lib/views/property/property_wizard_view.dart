@@ -2,10 +2,13 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../controllers/property_controller.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/input_formatters.dart';
 
 class PropertyWizardView extends GetView<PropertyController> {
   const PropertyWizardView({super.key});
@@ -312,21 +315,6 @@ class _StepForms extends StatelessWidget {
         key: controller.step1Key,
         child: Obx(() {
           final bool org = controller.isOrganization.value == '1';
-          String? _req(String? v) =>
-              (v == null || v.toString().trim().isEmpty) ? 'Required' : null;
-          String? _email(String? v) {
-            if (v == null || v.trim().isEmpty) return null;
-            return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())
-                ? null
-                : 'Enter a valid email';
-          }
-
-          String? _phone(String? v) {
-            if (v == null || v.trim().isEmpty) return 'Required';
-            return RegExp(r'^\+?[0-9]{7,15}$').hasMatch(v.trim())
-                ? null
-                : 'Invalid number';
-          }
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,7 +372,7 @@ class _StepForms extends StatelessWidget {
                             ),
                             autovalidateMode:
                                 AutovalidateMode.onUserInteraction,
-                            validator: _req,
+                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'First Name'),
                             onChanged: (v) =>
                                 controller.setField('landlord_first_name', v),
                           ),
@@ -405,7 +393,7 @@ class _StepForms extends StatelessWidget {
                       initialValue: _val('landlord_surname'),
                       decoration: _decoration.copyWith(labelText: 'Surname*'),
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: _req,
+                      validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Surname'),
                       onChanged: (v) =>
                           controller.setField('landlord_surname', v),
                     ),
@@ -419,7 +407,7 @@ class _StepForms extends StatelessWidget {
                       isExpanded: true,
                       value: _val('landlord_sex'),
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: _req,
+                      validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Gender'),
                       onChanged: (v) => controller.setField('landlord_sex', v),
                     ),
                     const SizedBox(height: 12),
@@ -464,7 +452,7 @@ class _StepForms extends StatelessWidget {
                             ),
                             autovalidateMode:
                                 AutovalidateMode.onUserInteraction,
-                            validator: _req,
+                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Name'),
                             onChanged: (v) =>
                                 controller.setField('organization_name', v),
                           ),
@@ -478,7 +466,7 @@ class _StepForms extends StatelessWidget {
                             ),
                             autovalidateMode:
                                 AutovalidateMode.onUserInteraction,
-                            validator: _req,
+                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Address'),
                             onChanged: (v) =>
                                 controller.setField('organization_addresss', v),
                           ),
@@ -492,7 +480,7 @@ class _StepForms extends StatelessWidget {
                         labelText: 'Organization Type',
                       ),
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: _req,
+                      validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Type'),
                       onChanged: (v) =>
                           controller.setField('organization_type', v),
                     ),
@@ -510,7 +498,7 @@ class _StepForms extends StatelessWidget {
                     ),
                     keyboardType: TextInputType.emailAddress,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: _email,
+                    validator: ValidationUtils.validateEmail,
                     onChanged: (v) => controller.setField('landlord_email', v),
                   ),
                   const SizedBox(height: 12),
@@ -522,8 +510,10 @@ class _StepForms extends StatelessWidget {
                           decoration: _decoration.copyWith(
                             labelText: 'Mobile 1*',
                           ),
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [PhoneNumberFormatter()],
                           autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: _phone,
+                          validator: (v) => ValidationUtils.validatePhone(v, isRequired: true),
                           onChanged: (v) =>
                               controller.setField('landlord_mobile_1', v),
                         ),
@@ -535,6 +525,10 @@ class _StepForms extends StatelessWidget {
                           decoration: _decoration.copyWith(
                             labelText: 'Mobile 2',
                           ),
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [PhoneNumberFormatter()],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                           onChanged: (v) =>
                               controller.setField('landlord_mobile_2', v),
                         ),
@@ -756,6 +750,9 @@ class _StepForms extends StatelessWidget {
                           labelText: 'Recipient Number',
                         ),
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [PhoneNumberFormatter()],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                         onChanged: (v) =>
                             controller.setField('delivered_number', v),
                       ),
@@ -935,6 +932,8 @@ class _StepForms extends StatelessWidget {
                         decoration: _decoration.copyWith(
                           labelText: 'Tenant First Name',
                         ),
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Tenant First Name'),
                         onChanged: (v) => controller.setField(
                           'occupancy_tenant_first_name',
                           v,
@@ -982,6 +981,9 @@ class _StepForms extends StatelessWidget {
                           labelText: 'Mobile Number 1',
                         ),
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [PhoneNumberFormatter()],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                         onChanged: (v) =>
                             controller.setField('occupancy_mobile_1', v),
                       ),
@@ -994,6 +996,9 @@ class _StepForms extends StatelessWidget {
                           labelText: 'Mobile Number 2',
                         ),
                         keyboardType: TextInputType.phone,
+                        inputFormatters: [PhoneNumberFormatter()],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
                         onChanged: (v) =>
                             controller.setField('occupancy_mobile_2', v),
                       ),
@@ -1007,24 +1012,6 @@ class _StepForms extends StatelessWidget {
       );
     }
     if (step == 3) {
-      // Validation function for step 4
-      String? _validateLatLong(String? v) {
-        if (v == null || v.trim().isEmpty) return 'Required';
-        final String trimmed = v.trim();
-        // Expected format: "lat,long" (e.g., "8.237550256892234,-13.085966873914003")
-        final List<String> parts = trimmed.split(',');
-        if (parts.length != 2) {
-          return 'Format: lat,long';
-        }
-        final double? lat = double.tryParse(parts[0].trim());
-        final double? lng = double.tryParse(parts[1].trim());
-        if (lat == null || lng == null) {
-          return 'Invalid coordinates';
-        }
-        if (lat < -90 || lat > 90) return 'Latitude must be -90 to 90';
-        if (lng < -180 || lng > 180) return 'Longitude must be -180 to 180';
-        return null;
-      }
 
       return Form(
         key: controller.step4Key,
@@ -1073,7 +1060,9 @@ class _StepForms extends StatelessWidget {
                           ),
                         ),
                         keyboardType: TextInputType.text,
-                        validator: _validateLatLong,
+                        inputFormatters: [CoordinateFormatter()],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: ValidationUtils.validateLatLong,
                         onChanged: (v) =>
                             controller.setField('registry_point$p', v),
                       );
@@ -1185,6 +1174,7 @@ class _StepForms extends StatelessWidget {
                                       labelText: 'Meter Number',
                                     ),
                                     keyboardType: TextInputType.text,
+                                    autovalidateMode: AutovalidateMode.onUserInteraction,
                                     validator: (v) {
                                       // Required if meter image is present
                                       if (hasImage &&
@@ -1310,25 +1300,51 @@ class _StepForms extends StatelessWidget {
                 children: [
                   Expanded(
                     child: TextFormField(
+                      key: const ValueKey('length_field'),
                       initialValue: _val('assessment_length'),
                       decoration: _decoration.copyWith(labelText: 'length'),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      onChanged: (v) =>
-                          controller.setField('assessment_length', v),
+                      inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) {
+                        final breadthValue = _val('assessment_breadth');
+                        final decimalError = ValidationUtils.validateDecimal(v, decimalPlaces: 2, isRequired: false);
+                        if (decimalError != null) return decimalError;
+                        return ValidationUtils.validateLengthGreaterThanBreadth(v, breadthValue);
+                      },
+                      onChanged: (v) {
+                        controller.setField('assessment_length', v);
+                        // Trigger validation on breadth field when length changes
+                        if (controller.step5Key.currentState != null) {
+                          controller.step5Key.currentState!.validate();
+                        }
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextFormField(
+                      key: const ValueKey('breadth_field'),
                       initialValue: _val('assessment_breadth'),
                       decoration: _decoration.copyWith(labelText: 'breadth'),
                       keyboardType: TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      onChanged: (v) =>
-                          controller.setField('assessment_breadth', v),
+                      inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) {
+                        final lengthValue = _val('assessment_length');
+                        return ValidationUtils.validateLengthGreaterThanBreadth(lengthValue, v);
+                      },
+                      onChanged: (v) {
+                        controller.setField('assessment_breadth', v);
+                        // Trigger validation on length field when breadth changes
+                        if (controller.step5Key.currentState != null) {
+                          controller.step5Key.currentState!.validate();
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -1412,6 +1428,9 @@ class _StepForms extends StatelessWidget {
                         labelText: 'No of Masts',
                       ),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [IntegerInputFormatter()],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
                       onChanged: (v) => controller.setField('total_mast', v),
                     ),
                   ),
@@ -1423,6 +1442,9 @@ class _StepForms extends StatelessWidget {
                         labelText: 'No of Shops',
                       ),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [IntegerInputFormatter()],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
                       onChanged: (v) => controller.setField('total_shops', v),
                     ),
                   ),
@@ -1438,6 +1460,9 @@ class _StepForms extends StatelessWidget {
                         labelText: 'No of Compound House',
                       ),
                       keyboardType: TextInputType.number,
+                      inputFormatters: [IntegerInputFormatter()],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
                       onChanged: (v) =>
                           controller.setField('total_compound_house', v),
                     ),
