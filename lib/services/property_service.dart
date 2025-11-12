@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart' show Get;
 import '../services/auth_service.dart';
+import '../utils/api_config.dart';
 
 class PropertyService {
   PropertyService._();
@@ -11,10 +12,10 @@ class PropertyService {
 
   final dio.Dio _dio = dio.Dio(
     dio.BaseOptions(
-      baseUrl: 'https://wardc.srvtechnology.com/public/api',
-      contentType: 'application/json',
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      baseUrl: ApiConfig.baseUrl,
+      contentType: ApiConfig.contentType,
+      connectTimeout: ApiConfig.timeout,
+      receiveTimeout: ApiConfig.timeout,
     ),
   );
 

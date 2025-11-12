@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'routes/app_pages.dart';
 import 'theme/app_theme.dart';
+import 'utils/api_config.dart';
 
 void main() {
+  // Configure API environment
+  // Set to Environment.development for dev, Environment.production for prod
+  // Default is production (https://wardc.srvtechnology.com/public/api/)
+  ApiConfig.setEnvironment(Environment.production);
+
   runApp(const MyApp());
 }
 

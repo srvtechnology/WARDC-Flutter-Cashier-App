@@ -1,5 +1,7 @@
 // lib/utils/constants.dart
 
+import 'api_config.dart';
+
 /// Application constants
 class AppConstants {
   AppConstants._();
@@ -8,9 +10,9 @@ class AppConstants {
   static const String appName = 'Western Area Rural District Council';
   static const String appVersion = '1.0.0';
 
-  // API
-  static const String baseUrl = 'https://api.example.com';
-  static const Duration apiTimeout = Duration(seconds: 30);
+  // API - Use ApiConfig for base URL management
+  static String get baseUrl => ApiConfig.baseUrl;
+  static Duration get apiTimeout => ApiConfig.timeout;
 
   // Storage Keys
   static const String keyAuthToken = 'auth_token';

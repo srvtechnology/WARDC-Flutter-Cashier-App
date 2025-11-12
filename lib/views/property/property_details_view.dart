@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:map_launcher/map_launcher.dart';
 import '../../services/property_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
@@ -29,6 +31,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     }
     return {};
   }
+
   Map<String, dynamic> get _occupancy =>
       Map<String, dynamic>.from((prop['occupancy'] ?? {}) as Map? ?? {});
   List<dynamic> get _occupancies => (prop['occupancies'] as List?) ?? const [];
@@ -45,8 +48,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     if (_loadingVars) return;
     setState(() => _loadingVars = true);
     try {
-      final Map<String, dynamic> data =
-          await PropertyService().getAllVariables();
+      final Map<String, dynamic> data = await PropertyService()
+          .getAllVariables();
       setState(() {
         _variables = data;
       });
@@ -83,6 +86,108 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     return out.join(', ');
   }
 
+  Future<void> _openGoogleMaps(String coordinates) async {
+    try {
+      // Parse coordinates (format: "lat,long" or "lat, long")
+      final String cleanCoords = coordinates.trim().replaceAll(' ', '');
+      final List<String> parts = cleanCoords.split(',');
+
+      if (parts.length != 2) {
+        Get.snackbar('Error', 'Invalid coordinates format');
+        return;
+      }
+
+      final double? lat = double.tryParse(parts[0]);
+      final double? lng = double.tryParse(parts[1]);
+
+      if (lat == null || lng == null) {
+        Get.snackbar('Error', 'Invalid coordinates format');
+        return;
+      }
+
+      // Try map_launcher first (more reliable)
+      try {
+        final availableMaps = await MapLauncher.installedMaps;
+
+        if (availableMaps.isNotEmpty) {
+          // Prefer Google Maps if available
+          MapType? preferredMap;
+          for (final map in availableMaps) {
+            if (map.mapType == MapType.google) {
+              preferredMap = map.mapType;
+              break;
+            }
+          }
+
+          // Use preferred map or first available
+          final mapToUse = preferredMap ?? availableMaps.first.mapType;
+
+          await MapLauncher.showMarker(
+            mapType: mapToUse,
+            coords: Coords(lat, lng),
+            title: 'Registry Point',
+          );
+          return; // Success, exit early
+        }
+      } catch (e) {
+        // If map_launcher fails, fall back to url_launcher
+        Get.log('map_launcher failed: $e, trying url_launcher...');
+      }
+
+      // Fallback to url_launcher with multiple URL formats
+      final List<String> urlFormats = [
+        // Format 1: Google Maps search URL (web) - recommended format
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+        // Format 2: Google Maps app URL (Android/iOS)
+        'https://maps.google.com/maps?q=$lat,$lng',
+        // Format 3: Geo scheme (native Android)
+        'geo:$lat,$lng',
+        // Format 4: Google Maps with zoom
+        'https://maps.google.com/?q=$lat,$lng&z=15',
+      ];
+
+      bool launched = false;
+      for (final String urlString in urlFormats) {
+        try {
+          final Uri url = Uri.parse(urlString);
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+            launched = true;
+            break;
+          }
+        } catch (_) {
+          // Try next format
+          continue;
+        }
+      }
+
+      if (!launched) {
+        // Last resort: try with encoded URL (as per Stack Overflow solution)
+        try {
+          final String encodedUrl = Uri.encodeFull(
+            'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+          );
+          final Uri url = Uri.parse(encodedUrl);
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url, mode: LaunchMode.externalApplication);
+            launched = true;
+          }
+        } catch (_) {
+          // Ignore
+        }
+      }
+
+      if (!launched) {
+        Get.snackbar(
+          'Error',
+          'Could not open maps. Please ensure a map application is installed.',
+        );
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to open map: ${e.toString()}');
+    }
+  }
+
   // Return values using the create form field names
   String _formValue(String key) {
     switch (key) {
@@ -92,7 +197,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             ? '1'
             : '0';
       case 'landlord_ownerTitle_id':
-        final dynamic tId = _landlord['ownerTitle'] ?? _landlord['ownerTitle_id'];
+        final dynamic tId =
+            _landlord['ownerTitle'] ?? _landlord['ownerTitle_id'];
         final String lbl = _labelFor('all_titles', tId);
         return (lbl.isEmpty || lbl == 'null') ? _text(tId) : lbl;
       case 'landlord_first_name':
@@ -103,7 +209,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return _text(_landlord['surname']);
       case 'landlord_sex':
         final String sex = _text(_landlord['sex']);
-        return sex.toUpperCase() == 'M' ? 'M' : (sex.toUpperCase() == 'F' ? 'F' : sex);
+        return sex.toUpperCase() == 'M'
+            ? 'M'
+            : (sex.toUpperCase() == 'F' ? 'F' : sex);
       case 'landlord_email':
         return _text(_landlord['email']);
       case 'landlord_id_type':
@@ -196,7 +304,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       case 'occupancy_mobile_2':
         return _text(_occupancy['mobile_2']);
       case 'tenant_ownerTitle_id':
-        final dynamic tId = _occupancy['ownerTenantTitle_id'] ?? _occupancy['ownerTenantTitle'];
+        final dynamic tId =
+            _occupancy['ownerTenantTitle_id'] ?? _occupancy['ownerTenantTitle'];
         final String lbl = _labelFor('all_titles', tId);
         return (lbl.isEmpty || lbl == 'null') ? _text(tId) : lbl;
 
@@ -208,7 +317,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       // Step 5 - Assessment (mapped to create form field names)
       case 'assessment_categories_id':
         // Get from categories array in assessments_object
-        final List<dynamic>? categories = _assessmentsObject['categories'] as List?;
+        final List<dynamic>? categories =
+            _assessmentsObject['categories'] as List?;
         if (categories != null && categories.isNotEmpty) {
           final ids = categories
               .whereType<Map>()
@@ -233,18 +343,34 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         }
         return '[]';
       case 'assessment_wall_materials_id':
-        return _labelFor('property_wall_materials', _assessmentsObject['property_wall_materials']);
+        return _labelFor(
+          'property_wall_materials',
+          _assessmentsObject['property_wall_materials'],
+        );
       case 'assessment_roofs_materials_id':
-        return _labelFor('property_roofs_materials', _assessmentsObject['roofs_materials']);
+        return _labelFor(
+          'property_roofs_materials',
+          _assessmentsObject['roofs_materials'],
+        );
       case 'assessment_window_type_id':
-        return _labelFor('property_window_types', _assessmentsObject['property_window_type']);
+        return _labelFor(
+          'property_window_types',
+          _assessmentsObject['property_window_type'],
+        );
       case 'assessment_length':
-        return _text(_assessmentsObject['assessment_length'] ?? _assessmentsObject['length']);
+        return _text(
+          _assessmentsObject['assessment_length'] ??
+              _assessmentsObject['length'],
+        );
       case 'assessment_breadth':
-        return _text(_assessmentsObject['assessment_breadth'] ?? _assessmentsObject['breadth']);
+        return _text(
+          _assessmentsObject['assessment_breadth'] ??
+              _assessmentsObject['breadth'],
+        );
       case 'assessment_value_added_id':
         // Get from values_added array in assessments_object
-        final List<dynamic>? valuesAdded = _assessmentsObject['values_added'] as List?;
+        final List<dynamic>? valuesAdded =
+            _assessmentsObject['values_added'] as List?;
         if (valuesAdded != null && valuesAdded.isNotEmpty) {
           final ids = valuesAdded
               .whereType<Map>()
@@ -270,9 +396,15 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       case 'gated_community':
         final dynamic gated = _assessmentsObject['gated_community'];
         if (gated == null) return '—';
-        return gated.toString() == '0' ? 'No' : (gated.toString() == '1' ? 'Yes' : gated.toString());
+        return gated.toString() == '0'
+            ? 'No'
+            : (gated.toString() == '1' ? 'Yes' : gated.toString());
       case 'swimming_pool':
-        return _labelFor('swimmings', _assessmentsObject['swimming_id'] ?? _assessmentsObject['swimming_pool']);
+        return _labelFor(
+          'swimmings',
+          _assessmentsObject['swimming_id'] ??
+              _assessmentsObject['swimming_pool'],
+        );
       default:
         if (key.startsWith('registry_point')) {
           final String idx = key.replaceFirst('registry_point', '');
@@ -355,7 +487,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                         ? () => Get.back()
                         : () => _step.value = (step + 1).clamp(0, 4),
                     icon: Icon(
-                      isLast ? Icons.check_circle_outline : Icons.arrow_forward_ios,
+                      isLast
+                          ? Icons.check_circle_outline
+                          : Icons.arrow_forward_ios,
                       size: 18,
                     ),
                     label: Text(isLast ? 'Close' : 'Next'),
@@ -387,7 +521,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             _SectionCard(
               title: 'Type',
               children: [
-                _KV('Is Organization', _formValue('is_organization') == '1' ? 'Yes' : 'No'),
+                _KV(
+                  'Is Organization',
+                  _formValue('is_organization') == '1' ? 'Yes' : 'No',
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -436,7 +573,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             _SectionCard(
               title: 'Category Type',
               children: [
-                _KV('Category Type', _formValue('categoryType') == 'R' ? 'Residential' : 'Commercial'),
+                _KV(
+                  'Category Type',
+                  _formValue('categoryType') == 'R'
+                      ? 'Residential'
+                      : 'Commercial',
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -444,7 +586,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               title: 'Delivery',
               children: [
                 _KV('Delivery Proof Image', _formValue('delivered_image')),
-                _KV('Is Draft Delivered?', _formValue('is_draft_delivered') == '1' ? 'Yes' : 'No'),
+                _KV(
+                  'Is Draft Delivered?',
+                  _formValue('is_draft_delivered') == '1' ? 'Yes' : 'No',
+                ),
                 _KV('Recipient Name', _formValue('delivered_name')),
                 _KV('Recipient Number', _formValue('delivered_number')),
               ],
@@ -454,7 +599,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               title: 'Address',
               children: [
                 _KV('Street Number', _formValue('property_street_number')),
-                _KV('Street Number (New)', _formValue('property_street_numbernew')),
+                _KV(
+                  'Street Number (New)',
+                  _formValue('property_street_numbernew'),
+                ),
                 _KV('Street Name', _formValue('property_street_name')),
                 _KV('Postcode', _formValue('property_postcode')),
                 _KV('Ward', _formValue('property_ward')),
@@ -469,18 +617,15 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             _SectionCard(
               title: 'Other',
               children: [
-                _KV(
-                  'Property Inaccessible',
-                  () {
-                    final List<String> ids = _propertyInaccessible
-                        .whereType<Map>()
-                        .map((e) => e['id'])
-                        .where((e) => e != null)
-                        .map((e) => e.toString())
-                        .toList();
-                    return _labelsFor('property_inaccessibles', ids);
-                  }(),
-                ),
+                _KV('Property Inaccessible', () {
+                  final List<String> ids = _propertyInaccessible
+                      .whereType<Map>()
+                      .map((e) => e['id'])
+                      .where((e) => e != null)
+                      .map((e) => e.toString())
+                      .toList();
+                  return _labelsFor('property_inaccessibles', ids);
+                }()),
               ],
             ),
           ],
@@ -496,7 +641,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               .toList()
               .cast<String>();
         }
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -551,7 +696,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                   ),
                 ),
                 _KV('Tenant Title', _formValue('tenant_ownerTitle_id')),
-                _KV('Tenant First Name', _formValue('occupancy_tenant_first_name')),
+                _KV(
+                  'Tenant First Name',
+                  _formValue('occupancy_tenant_first_name'),
+                ),
                 _KV('Tenant Middle Name', _formValue('occupancy_middle_name')),
                 _KV('Tenant Surname', _formValue('occupancy_surname')),
                 _KV('Mobile Number 1', _formValue('occupancy_mobile_1')),
@@ -584,100 +732,119 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                     crossAxisCount: 2,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 2.2,
+                    childAspectRatio: 1.6,
                   ),
                   itemBuilder: (context, index) {
                     final int p = index + 1;
                     final String pointValue = _formValue('registry_point$p');
-                    final bool hasValue = pointValue.isNotEmpty && pointValue != '—';
-                    
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: hasValue 
-                            ? Colors.green.withOpacity(0.05)
-                            : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: hasValue 
-                              ? Colors.green.withOpacity(0.3)
-                              : Colors.grey.shade300,
-                          width: 1.5,
-                        ),
-                        boxShadow: hasValue
-                            ? [
-                                BoxShadow(
-                                  color: Colors.green.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 28,
-                                height: 28,
-                                decoration: BoxDecoration(
-                                  color: hasValue 
-                                      ? Colors.green
-                                      : Colors.grey.shade400,
-                                  shape: BoxShape.circle,
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  '$p',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                    final bool hasValue =
+                        pointValue.isNotEmpty && pointValue != '—';
+
+                    return GestureDetector(
+                      onTap: hasValue
+                          ? () => _openGoogleMaps(pointValue)
+                          : null,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: hasValue
+                              ? Colors.green.withOpacity(0.05)
+                              : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: hasValue
+                                ? Colors.green.withOpacity(0.3)
+                                : Colors.grey.shade300,
+                            width: 1.5,
+                          ),
+                          boxShadow: hasValue
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.green.withOpacity(0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
                                   ),
+                                ]
+                              : null,
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: hasValue
+                                        ? Colors.green
+                                        : Colors.grey.shade400,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    '$p',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    'Point $p',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                      color: hasValue
+                                          ? Colors.green.shade700
+                                          : Colors.grey.shade600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (hasValue) ...[
+                                  const SizedBox(width: 4),
+                                  Icon(
+                                    Icons.open_in_new,
+                                    size: 14,
+                                    color: Colors.green.shade700,
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (hasValue) ...[
+                              const SizedBox(height: 6),
+                              Flexible(
+                                child: Text(
+                                  pointValue,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade700,
+                                    fontFamily: 'monospace',
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Point $p',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                    color: hasValue 
-                                        ? Colors.green.shade700
-                                        : Colors.grey.shade600,
-                                  ),
+                            ] else ...[
+                              const SizedBox(height: 6),
+                              Text(
+                                'Not set',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey.shade500,
+                                  fontStyle: FontStyle.italic,
                                 ),
                               ),
                             ],
-                          ),
-                          if (hasValue) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              pointValue,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade700,
-                                fontFamily: 'monospace',
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ] else ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Not set',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade500,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
                           ],
-                        ],
+                        ),
                       ),
                     );
                   },
@@ -689,7 +856,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       default:
         // Helper to get labels for categories, types, and values_added
         String _getCategoriesLabels() {
-          final List<dynamic>? categories = _assessmentsObject['categories'] as List?;
+          final List<dynamic>? categories =
+              _assessmentsObject['categories'] as List?;
           if (categories == null || categories.isEmpty) return '—';
           final labels = categories
               .whereType<Map>()
@@ -698,7 +866,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               .toList();
           return labels.isEmpty ? '—' : labels.join(', ');
         }
-        
+
         String _getTypesLabels() {
           final List<dynamic>? types = _assessmentsObject['types'] as List?;
           if (types == null || types.isEmpty) return '—';
@@ -709,9 +877,10 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               .toList();
           return labels.isEmpty ? '—' : labels.join(', ');
         }
-        
+
         String _getValuesAddedLabels() {
-          final List<dynamic>? valuesAdded = _assessmentsObject['values_added'] as List?;
+          final List<dynamic>? valuesAdded =
+              _assessmentsObject['values_added'] as List?;
           if (valuesAdded == null || valuesAdded.isEmpty) return '—';
           final labels = valuesAdded
               .whereType<Map>()
@@ -720,7 +889,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               .toList();
           return labels.isEmpty ? '—' : labels.join(', ');
         }
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -729,8 +898,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               children: [
                 _KV('Property Categories', _getCategoriesLabels()),
                 _KV('Property Types', _getTypesLabels()),
-                _KV('Wall Material', _formValue('assessment_wall_materials_id')),
-                _KV('Roof Material', _formValue('assessment_roofs_materials_id')),
+                _KV(
+                  'Wall Material',
+                  _formValue('assessment_wall_materials_id'),
+                ),
+                _KV(
+                  'Roof Material',
+                  _formValue('assessment_roofs_materials_id'),
+                ),
                 _KV('Window Type', _formValue('assessment_window_type_id')),
                 _KV('Length', _formValue('assessment_length')),
                 _KV('Breadth', _formValue('assessment_breadth')),
@@ -745,9 +920,18 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 _KV('Swimming Pool', _formValue('swimming_pool')),
                 // Extra financials for quick context
                 _KV('Mill rate', _text(_assessmentsObject['mill_rate'])),
-                _KV('Current year amount', _text(_assessmentsObject['current_year_assessment_amount'])),
-                _KV('Rate without GST', _text(_assessmentsObject['property_rate_without_gst'])),
-                _KV('Rate with GST', _text(_assessmentsObject['property_rate_with_gst'])),
+                _KV(
+                  'Current year amount',
+                  _text(_assessmentsObject['current_year_assessment_amount']),
+                ),
+                _KV(
+                  'Rate without GST',
+                  _text(_assessmentsObject['property_rate_without_gst']),
+                ),
+                _KV(
+                  'Rate with GST',
+                  _text(_assessmentsObject['property_rate_with_gst']),
+                ),
                 _KV('GST', _text(_assessmentsObject['property_gst'])),
                 _KV('Due', _text(_assessmentsObject['due'])),
                 _KV('Balance', _text(_assessmentsObject['balance'])),
@@ -772,17 +956,11 @@ class _KV extends StatelessWidget {
         children: [
           SizedBox(
             width: 160,
-            child: Text(
-              k,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            child: Text(k, style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              v,
-              style: const TextStyle(color: Colors.black87),
-            ),
+            child: Text(v, style: const TextStyle(color: Colors.black87)),
           ),
         ],
       ),
@@ -861,7 +1039,9 @@ class _HeaderStepper extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: isActive ? Colors.green : Colors.black87,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: isActive
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         height: 1.2,
                       ),
                     ),
@@ -948,5 +1128,3 @@ class _HeaderStepper extends StatelessWidget {
     );
   }
 }
-
-

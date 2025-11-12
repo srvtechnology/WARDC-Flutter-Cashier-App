@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/api_config.dart';
 
 enum UserType { assessmentOfficer, cashier }
 
@@ -11,10 +12,10 @@ class AuthService {
   AuthService._internal()
     : _dio = Dio(
         BaseOptions(
-          baseUrl: 'https://wardc.srvtechnology.com/public/api',
-          contentType: 'application/json',
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 15),
+          baseUrl: ApiConfig.baseUrl,
+          contentType: ApiConfig.contentType,
+          connectTimeout: ApiConfig.timeout,
+          receiveTimeout: ApiConfig.timeout,
         ),
       );
 
