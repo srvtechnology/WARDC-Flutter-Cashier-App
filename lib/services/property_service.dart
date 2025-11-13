@@ -70,6 +70,41 @@ class PropertyService {
     }
   }
 
+  Future<Map<String, dynamic>> searchByPropertyId({
+    required String propertyId,
+    int page = 1,
+    int limit = 10,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    try {
+      final dio.Response<dynamic> res = await _dio.get(
+        '/admin/property-listing',
+        queryParameters: <String, dynamic>{
+          'page': page,
+          'limit': limit,
+          'property_id': propertyId,
+          'mobile_app': 'yes',
+        },
+        options: options,
+      );
+      final Map<String, dynamic> response = _cast(res.data);
+
+      return response;
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Property search failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
   Future<Map<String, dynamic>> savePropertyMultipart({
     required Map<String, dynamic> fields,
     Map<String, dynamic>?

@@ -18,5 +18,6 @@ abstract class Routes {
   static const editGeo = '/edit-geo';
   static const editAssessment = '/edit-assessment';
   static const userProfile = '/user-profile';
+  static const propertySearch = '/property-search';
 }
 

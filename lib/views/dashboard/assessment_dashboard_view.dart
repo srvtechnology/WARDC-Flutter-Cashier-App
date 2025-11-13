@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../controllers/property_controller.dart';
 import '../../controllers/property_list_controller.dart';
 import '../../services/auth_service.dart';
+import '../../routes/app_pages.dart';
 import '../property/property_list_view.dart';
 import '../property/property_wizard_view.dart';
 import '../profile/user_profile_view.dart';
@@ -24,6 +25,21 @@ class AssessmentDashboardView extends StatelessWidget {
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
+          // Search Icon Button
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search_rounded, size: 22),
+            ),
+            onPressed: () {
+              Get.toNamed(Routes.propertySearch);
+            },
+            tooltip: 'Search properties',
+          ),
           // Profile Avatar Button
           FutureBuilder<Map<String, dynamic>>(
             future: _getUserInitials(authService),
