@@ -120,16 +120,13 @@ class AssessmentDashboardView extends StatelessWidget {
       if (userData['userData'] != null) {
         final name = userData['userData']?['name']?.toString() ?? '';
         if (name.isNotEmpty) {
-          return {
-            'initials': _getInitialsFromName(name),
-            'name': name,
-          };
+          return {'initials': _getInitialsFromName(name), 'name': name};
         }
       }
     } catch (e) {
       // If API fails, fallback to saved email
     }
-    
+
     // Fallback to email-based initials
     final email = await authService.getSavedUserEmail();
     return {
