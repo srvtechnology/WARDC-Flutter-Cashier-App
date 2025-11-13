@@ -34,6 +34,9 @@ class AuthService {
   static const String _assessmentLoginPath = '/assesment-app-user-login';
   static const String _cashierLoginPath = '/payment-app-user-login';
   static const String _logoutPath = '/app-user-logout';
+  static const String _getUserPath = '/user-get';
+  static const String _updateProfilePath = '/update-profile-for-assement-app';
+  static const String _changePasswordPath = '/change-password-for-assement-app';
 
   Future<String> login({
     required String email,
@@ -124,6 +127,101 @@ class AuthService {
   Future<String?> getSavedUserEmail() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString(_kUserEmailKey);
+  }
+
+  Future<Map<String, dynamic>> getUserData() async {
+    final String? token = await getToken();
+    try {
+      final Response<dynamic> response = await _dio.get(
+        _getUserPath,
+        options: Options(
+          headers: <String, String>{
+            'Accept': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      final Map<String, dynamic> body = _asJson(response.data);
+      return body;
+    } on DioException catch (e) {
+      throw AuthException(_mapDioError(e));
+    } catch (e) {
+      throw AuthException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    required String email,
+    required String gender,
+  }) async {
+    final String? token = await getToken();
+    try {
+      final Response<dynamic> response = await _dio.post(
+        _updateProfilePath,
+        data: <String, dynamic>{
+          'name': name,
+          'email': email,
+          'gender': gender.toLowerCase(),
+        },
+        options: Options(
+          headers: <String, String>{
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      final Map<String, dynamic> body = _asJson(response.data);
+      
+      // Update saved email if profile update is successful
+      if (body['success'] == true && body['data'] != null) {
+        final updatedData = _asJson(body['data']);
+        final updatedEmail = updatedData['email']?.toString();
+        if (updatedEmail != null) {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_kUserEmailKey, updatedEmail);
+        }
+      }
+      
+      return body;
+    } on DioException catch (e) {
+      throw AuthException(_mapDioError(e));
+    } catch (e) {
+      throw AuthException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final String? token = await getToken();
+    try {
+      final Response<dynamic> response = await _dio.post(
+        _changePasswordPath,
+        data: <String, dynamic>{
+          'old_password': oldPassword,
+          'new_password': newPassword,
+        },
+        options: Options(
+          headers: <String, String>{
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            if (token != null && token.isNotEmpty)
+              'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+      final Map<String, dynamic> body = _asJson(response.data);
+      return body;
+    } on DioException catch (e) {
+      throw AuthException(_mapDioError(e));
+    } catch (e) {
+      throw AuthException(e.toString());
+    }
   }
 
   Future<void> _storeAuth({

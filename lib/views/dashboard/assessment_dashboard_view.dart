@@ -25,11 +25,10 @@ class AssessmentDashboardView extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           // Profile Avatar Button
-          FutureBuilder<String?>(
-            future: authService.getSavedUserEmail(),
+          FutureBuilder<Map<String, dynamic>>(
+            future: _getUserInitials(authService),
             builder: (context, snapshot) {
-              final email = snapshot.data ?? '';
-              final initials = _getInitials(email);
+              final initials = snapshot.data?['initials'] ?? 'U';
 
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -114,7 +113,41 @@ class AssessmentDashboardView extends StatelessWidget {
     );
   }
 
-  String _getInitials(String email) {
+  Future<Map<String, dynamic>> _getUserInitials(AuthService authService) async {
+    try {
+      // Try to get user data from API
+      final userData = await authService.getUserData();
+      if (userData['userData'] != null) {
+        final name = userData['userData']?['name']?.toString() ?? '';
+        if (name.isNotEmpty) {
+          return {
+            'initials': _getInitialsFromName(name),
+            'name': name,
+          };
+        }
+      }
+    } catch (e) {
+      // If API fails, fallback to saved email
+    }
+    
+    // Fallback to email-based initials
+    final email = await authService.getSavedUserEmail();
+    return {
+      'initials': _getInitialsFromEmail(email ?? ''),
+      'name': email ?? '',
+    };
+  }
+
+  String _getInitialsFromName(String name) {
+    if (name.isEmpty) return 'U';
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) return 'U';
+    // Get first letter of the first word
+    final firstChar = trimmedName[0].toUpperCase();
+    return firstChar;
+  }
+
+  String _getInitialsFromEmail(String email) {
     if (email.isEmpty) return 'U';
     final parts = email.split('@');
     if (parts.isEmpty) return 'U';
