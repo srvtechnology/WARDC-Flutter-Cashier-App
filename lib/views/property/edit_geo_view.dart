@@ -9,7 +9,6 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
-import '../../services/loading_service.dart';
 
 class EditGeoView extends StatefulWidget {
   const EditGeoView({super.key, required this.property});
@@ -29,6 +28,7 @@ class _EditGeoViewState extends State<EditGeoView> {
 
   // Meter management
   final List<Map<String, dynamic>> _meters = [];
+  bool _isSubmitting = false;
 
   Map<String, dynamic> get _geo =>
       Map<String, dynamic>.from(
@@ -53,7 +53,7 @@ class _EditGeoViewState extends State<EditGeoView> {
     _digitalAddressController.text = _geo['digital_address']?.toString() ?? '';
     _dorLatLongController.text = _geo['dor_lat_long']?.toString() ?? '';
 
-    // Initialize meters from existing data
+    // Initialize meters from existing data - include all metadata fields
     for (final meter in _registryMeters) {
       if (meter is Map) {
         _meters.add({
@@ -61,7 +61,13 @@ class _EditGeoViewState extends State<EditGeoView> {
           'property_id': meter['property_id'],
           'number': meter['number']?.toString() ?? '',
           'image': meter['image']?.toString(),
+          'created_at': meter['created_at']?.toString(),
+          'updated_at': meter['updated_at']?.toString(),
+          'original': meter['original']?.toString(),
+          'small_preview': meter['small_preview']?.toString(),
+          'large_preview': meter['large_preview']?.toString(),
           'imageFile': null, // No new image selected yet
+          'imageUrl': null, // No blob URL yet
         });
       }
     }
@@ -110,6 +116,8 @@ class _EditGeoViewState extends State<EditGeoView> {
       _meters.add({
         'number': '',
         'imageFile': null,
+        'imageUrl': null,
+        'small_preview': '',
       });
     });
   }
@@ -155,12 +163,20 @@ class _EditGeoViewState extends State<EditGeoView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    LoadingService.showLoading(message: 'Updating geo location...');
+    setState(() => _isSubmitting = true);
 
     try {
+      // Ensure property_geo_registry_id is not null
+      final geoId = _geo['id'];
+      if (geoId == null) {
+        ToastService.showError('Geo registry ID is missing');
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
       final fields = <String, dynamic>{
-        'property_id': widget.property['id'],
-        'property_geo_registry_id': _geo['id'],
+        'property_id': widget.property['id'].toString(),
+        'property_geo_registry_id': geoId.toString(),
         'digital_address': _digitalAddressController.text.trim(),
         'dor_lat_long': _dorLatLongController.text.trim(),
       };
@@ -173,7 +189,10 @@ class _EditGeoViewState extends State<EditGeoView> {
         }
       }
 
-      // Prepare meter data
+      // Log the payload for debugging
+      Get.log('Geo update fields: ${fields.toString()}');
+
+      // Prepare meter data with proper structure
       final List<Map<String, dynamic>> meterData = [];
       for (final meter in _meters) {
         final Map<String, dynamic> meterEntry = {};
@@ -184,18 +203,51 @@ class _EditGeoViewState extends State<EditGeoView> {
           meterEntry['property_id'] = meter['property_id'];
           meterEntry['number'] = meter['number']?.toString() ?? '';
           
+          // Include all metadata fields for existing meters
+          if (meter['created_at'] != null) {
+            meterEntry['created_at'] = meter['created_at'];
+          }
+          if (meter['updated_at'] != null) {
+            meterEntry['updated_at'] = meter['updated_at'];
+          }
+          if (meter['original'] != null) {
+            meterEntry['original'] = meter['original'];
+          }
+          if (meter['small_preview'] != null) {
+            meterEntry['small_preview'] = meter['small_preview'];
+          }
+          if (meter['large_preview'] != null) {
+            meterEntry['large_preview'] = meter['large_preview'];
+          }
+          
           // If new image file is selected, use it; otherwise keep existing image
-          if (meter['imageFile'] != null) {
+          if (meter['imageFile'] != null && meter['imageFile'].toString().isNotEmpty) {
+            // User is updating the image - include both old image path and new file
             meterEntry['imageFile'] = meter['imageFile'];
+            // Also include existing image path if available
+            if (meter['image'] != null) {
+              meterEntry['image'] = meter['image'];
+            }
           } else if (meter['image'] != null) {
+            // Keep existing image
             meterEntry['image'] = meter['image'];
           }
         } else {
           // New meter (no id)
           meterEntry['number'] = meter['number']?.toString() ?? '';
-          if (meter['imageFile'] != null) {
+          
+          // New meter must have imageFile
+          if (meter['imageFile'] != null && meter['imageFile'].toString().isNotEmpty) {
             meterEntry['imageFile'] = meter['imageFile'];
           }
+          
+          // Include imageUrl if available (for blob URLs)
+          if (meter['imageUrl'] != null && meter['imageUrl'].toString().isNotEmpty) {
+            meterEntry['imageUrl'] = meter['imageUrl'];
+          }
+          
+          // Include empty small_preview for new meters if needed
+          meterEntry['small_preview'] = meter['small_preview']?.toString() ?? '';
         }
         
         // Only add if meter has number or image
@@ -206,18 +258,31 @@ class _EditGeoViewState extends State<EditGeoView> {
         }
       }
 
-      await _propertyService.updateGeoLocation(
+      // Log meter data for debugging
+      Get.log('Meter data count: ${meterData.length}');
+      for (int i = 0; i < meterData.length; i++) {
+        Get.log('Meter $i: ${meterData[i].toString()}');
+      }
+
+      // Always pass meterData, even if empty (API might need it)
+      final response = await _propertyService.updateGeoLocation(
         fields: fields,
-        meterData: meterData.isNotEmpty ? meterData : null,
+        meterData: meterData,
       );
+
+      // Log response for debugging
+      Get.log('Geo update response: ${response.toString()}');
 
       ToastService.showSuccess('Geo location information updated successfully');
       
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
-      ToastService.showError('Failed to update geo location: $e');
+      Get.log('Geo update error: $e');
+      ToastService.showError('Failed to update geo location: ${e.toString()}');
     } finally {
-      LoadingService.hideLoading();
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -393,7 +458,7 @@ class _EditGeoViewState extends State<EditGeoView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _isSubmitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -402,7 +467,16 @@ class _EditGeoViewState extends State<EditGeoView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text('Update Geo Registry'),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text('Update Geo Registry'),
                       ),
                     ),
                   ],

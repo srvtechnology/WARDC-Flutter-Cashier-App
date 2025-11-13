@@ -8,7 +8,6 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
-import '../../services/loading_service.dart';
 
 class EditAssessmentView extends StatefulWidget {
   const EditAssessmentView({super.key, required this.property});
@@ -45,6 +44,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
 
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
+  bool _isSubmitting = false;
 
   Map<String, dynamic> get _assessmentsObject {
     final List<dynamic>? assessments = widget.property['assessments_object'] as List?;
@@ -199,7 +199,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    LoadingService.showLoading(message: 'Updating assessment...');
+    setState(() => _isSubmitting = true);
 
     try {
       // Prepare council adjustments JSON
@@ -257,7 +257,9 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     } catch (e) {
       ToastService.showError('Failed to update assessment: $e');
     } finally {
-      LoadingService.hideLoading();
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -558,7 +560,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _isSubmitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -567,7 +569,16 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text('Update Assessment'),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text('Update Assessment'),
                       ),
                     ),
                   ],

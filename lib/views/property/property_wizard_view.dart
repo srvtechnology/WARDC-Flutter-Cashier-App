@@ -90,27 +90,39 @@ class PropertyWizardView extends GetView<PropertyController> {
                   ),
                 if (step > 0) const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: isLastStep
-                        ? controller.submit
-                        : controller.nextStep,
-                    icon: Icon(
-                      isLastStep
-                          ? Icons.check_circle_outline
-                          : Icons.arrow_forward_ios,
-                      size: 18,
-                    ),
-                    label: Text(isLastStep ? 'Submit' : 'Next'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  child: Obx(() {
+                    final bool isSubmitting = controller.isSubmitting.value;
+                    return ElevatedButton.icon(
+                      onPressed: isSubmitting
+                          ? null
+                          : (isLastStep ? controller.submit : controller.nextStep),
+                      icon: isSubmitting
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : Icon(
+                              isLastStep
+                                  ? Icons.check_circle_outline
+                                  : Icons.arrow_forward_ios,
+                              size: 18,
+                            ),
+                      label: Text(isLastStep ? 'Submit' : 'Next'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                 ),
               ],
             ),

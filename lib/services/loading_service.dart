@@ -3,92 +3,55 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+/// @deprecated This service is deprecated. Use individual loading states
+/// with button disabled state and CircularProgressIndicator in buttons instead.
+@Deprecated('Use individual loading states with button disabled state instead')
 class LoadingService {
   LoadingService._();
 
-  static OverlayEntry? _overlayEntry;
-  static bool _isVisible = false;
+  static bool _isLoading = false;
 
   /// Show loading overlay
-  static void showLoading({String? message}) {
-    final context = Get.context;
-    if (context == null) {
-      Get.log('LoadingService: Context not available, cannot show loading');
-      return;
-    }
+  static void showLoading({String message = 'Loading...'}) {
+    if (_isLoading) return;
 
-    // Remove existing loading if any
-    if (_isVisible) {
-      hideLoading();
-    }
-
-    _overlayEntry = OverlayEntry(
-      builder: (context) => _LoadingWidget(message: message),
-    );
-
-    final overlay = Overlay.of(context);
-    overlay.insert(_overlayEntry!);
-    _isVisible = true;
-  }
-
-  /// Hide loading overlay
-  static void hideLoading() {
-    if (_overlayEntry != null && _isVisible) {
-      _overlayEntry!.remove();
-      _overlayEntry = null;
-      _isVisible = false;
-    }
-  }
-
-  /// Check if loading is currently visible
-  static bool get isLoading => _isVisible;
-}
-
-class _LoadingWidget extends StatelessWidget {
-  const _LoadingWidget({this.message});
-
-  final String? message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.black.withOpacity(0.5),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
+    _isLoading = true;
+    Get.dialog(
+      WillPopScope(
+        onWillPop: () async => false, // Prevent dialog from being dismissed by back button
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
               ),
-              if (message != null && message!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  message!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
+              const SizedBox(height: 16),
+              Text(
+                message,
+                style: const TextStyle(color: Colors.black87, fontSize: 16),
+              ),
             ],
           ),
         ),
       ),
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
     );
   }
+
+  /// Hide loading overlay
+  static void hideLoading() {
+    if (_isLoading) {
+      if (Get.isDialogOpen ?? false) {
+        Get.back();
+      }
+      _isLoading = false;
+    }
+  }
+
+  /// Check if loading is currently visible
+  static bool get isLoading => _isLoading;
 }
+
 

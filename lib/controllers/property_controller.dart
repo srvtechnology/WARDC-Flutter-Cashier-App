@@ -8,7 +8,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/property_models.dart';
 import '../services/property_service.dart';
 import '../services/toast_service.dart';
-import '../services/loading_service.dart';
 import '../routes/app_pages.dart';
 import 'property_list_controller.dart';
 
@@ -326,7 +325,6 @@ class PropertyController extends GetxController {
     // Log step 5 (Assessment) payload before submission
     _printAssessmentPayload();
 
-    LoadingService.showLoading(message: 'Submitting property...');
     isSubmitting.value = true;
     try {
       // Merge and prepare all payload data from all steps
@@ -375,7 +373,6 @@ class PropertyController extends GetxController {
       ToastService.showError(e.toString());
     } finally {
       isSubmitting.value = false;
-      LoadingService.hideLoading();
     }
   }
 

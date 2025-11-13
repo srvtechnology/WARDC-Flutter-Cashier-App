@@ -6,7 +6,6 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
-import '../../services/loading_service.dart';
 
 class EditOccupancyView extends StatefulWidget {
   const EditOccupancyView({super.key, required this.property});
@@ -27,6 +26,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
 
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
+  bool _isSubmitting = false;
 
   static const List<String> _types = <String>[
     'Owned Tenancy',
@@ -98,7 +98,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
       return;
     }
 
-    LoadingService.showLoading(message: 'Updating occupancy...');
+    setState(() => _isSubmitting = true);
 
     try {
       final payload = <String, dynamic>{
@@ -120,7 +120,9 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
     } catch (e) {
       ToastService.showError('Failed to update occupancy: $e');
     } finally {
-      LoadingService.hideLoading();
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -242,7 +244,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _isSubmitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -251,7 +253,16 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text('Update Occupancy'),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text('Update Occupancy'),
                       ),
                     ),
                   ],

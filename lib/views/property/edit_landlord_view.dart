@@ -6,7 +6,6 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
-import '../../services/loading_service.dart';
 
 class EditLandlordView extends StatefulWidget {
   const EditLandlordView({super.key, required this.property});
@@ -35,6 +34,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
 
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
+  bool _isSubmitting = false;
 
   Map<String, dynamic> get _landlord =>
       Map<String, dynamic>.from(
@@ -117,7 +117,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    LoadingService.showLoading(message: 'Updating landlord...');
+    setState(() => _isSubmitting = true);
 
     try {
       final payload = <String, dynamic>{
@@ -159,7 +159,9 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     } catch (e) {
       ToastService.showError('Failed to update landlord: $e');
     } finally {
-      LoadingService.hideLoading();
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -438,7 +440,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _isSubmitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -447,7 +449,16 @@ class _EditLandlordViewState extends State<EditLandlordView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text('Update Landlord'),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text('Update Landlord'),
                       ),
                     ),
                   ],
@@ -458,10 +469,29 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   }
 
   Widget _buildTitleSelect() {
-    final List<Map<String, dynamic>> options = _getTitleOptions();
+    final List<Map<String, dynamic>> rawOptions = _getTitleOptions();
+    
+    // Deduplicate options by ID to prevent duplicate values
+    final Map<String, Map<String, dynamic>> uniqueOptions = {};
+    for (final option in rawOptions) {
+      final id = (option['id'] ?? option['value']).toString();
+      if (!uniqueOptions.containsKey(id)) {
+        uniqueOptions[id] = option;
+      }
+    }
+    final List<Map<String, dynamic>> options = uniqueOptions.values.toList();
+    
+    // Only set value if it exists in the options
+    final String? selectedValue = options.isEmpty
+        ? null
+        : (_ownerTitleId != null && 
+           options.any((o) => (o['id'] ?? o['value']).toString() == _ownerTitleId))
+            ? _ownerTitleId
+            : null;
+    
     return DropdownButtonFormField<String>(
       decoration: _decoration.copyWith(labelText: 'Title'),
-      value: options.isEmpty ? null : _ownerTitleId,
+      value: selectedValue,
       isExpanded: true,
       hint: options.isEmpty
           ? const Text('Loading...', style: TextStyle(color: Colors.grey))
@@ -501,10 +531,29 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   }
 
   Widget _buildAdminSelect(String dataKey, String label, bool required, Function(String?) onChanged, String? value) {
-    final List<Map<String, dynamic>> options = _getAdminOptions(dataKey);
+    final List<Map<String, dynamic>> rawOptions = _getAdminOptions(dataKey);
+    
+    // Deduplicate options by ID to prevent duplicate values
+    final Map<String, Map<String, dynamic>> uniqueOptions = {};
+    for (final option in rawOptions) {
+      final id = (option['id'] ?? option['value']).toString();
+      if (!uniqueOptions.containsKey(id)) {
+        uniqueOptions[id] = option;
+      }
+    }
+    final List<Map<String, dynamic>> options = uniqueOptions.values.toList();
+    
+    // Only set value if it exists in the options
+    final String? selectedValue = options.isEmpty
+        ? null
+        : (value != null && 
+           options.any((o) => (o['id'] ?? o['value']).toString() == value))
+            ? value
+            : null;
+    
     return DropdownButtonFormField<String>(
       decoration: _decoration.copyWith(labelText: label),
-      value: options.isEmpty ? null : value,
+      value: selectedValue,
       isExpanded: true,
       hint: options.isEmpty
           ? const Text('Loading...', style: TextStyle(color: Colors.grey))

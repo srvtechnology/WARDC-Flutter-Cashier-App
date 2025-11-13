@@ -27,7 +27,23 @@ class ToastService {
     // Check if context is available
     final context = Get.context;
     if (context == null) {
-      Get.log('ToastService: Context not available, cannot show toast');
+      _showFallbackSnackbar(message, type, title, duration);
+      return;
+    }
+
+    // Check if overlay is available before trying to use it
+    OverlayState? overlay;
+    try {
+      overlay = Overlay.maybeOf(context, rootOverlay: true);
+    } catch (e) {
+      // Overlay not available, use fallback
+      _showFallbackSnackbar(message, type, title, duration);
+      return;
+    }
+
+    if (overlay == null) {
+      // Overlay not available, use fallback
+      _showFallbackSnackbar(message, type, title, duration);
       return;
     }
 
@@ -52,7 +68,6 @@ class ToastService {
       ),
     );
 
-    final overlay = Overlay.of(context);
     overlay.insert(_overlayEntry!);
     _isVisible = true;
 
@@ -60,6 +75,33 @@ class ToastService {
     Future.delayed(toastDuration, () {
       hide();
     });
+  }
+
+  /// Fallback to Get.snackbar when overlay is not available
+  static void _showFallbackSnackbar(
+    String message,
+    ToastType type,
+    String? title,
+    Duration? duration,
+  ) {
+    final toastData = _getToastData(type);
+    final snackbarTitle = title ?? toastData['title'] as String;
+    final snackbarDuration = duration ?? _getDefaultDuration(type);
+    
+    Get.snackbar(
+      snackbarTitle,
+      message,
+      backgroundColor: toastData['backgroundColor'] as Color,
+      colorText: toastData['textColor'] as Color,
+      icon: Icon(
+        toastData['icon'] as IconData,
+        color: toastData['iconColor'] as Color,
+      ),
+      duration: snackbarDuration,
+      snackPosition: SnackPosition.TOP,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
   }
 
   /// Show success toast

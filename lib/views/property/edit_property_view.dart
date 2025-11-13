@@ -9,7 +9,6 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
-import '../../services/loading_service.dart';
 
 class EditPropertyView extends StatefulWidget {
   const EditPropertyView({super.key, required this.property});
@@ -38,6 +37,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
 
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -164,7 +164,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    LoadingService.showLoading(message: 'Updating property...');
+    setState(() => _isSubmitting = true);
 
     try {
       final fields = <String, dynamic>{
@@ -208,7 +208,9 @@ class _EditPropertyViewState extends State<EditPropertyView> {
     } catch (e) {
       ToastService.showError('Failed to update property: $e');
     } finally {
-      LoadingService.hideLoading();
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
@@ -432,7 +434,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _isSubmitting ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -441,7 +443,16 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text('Update Property'),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : const Text('Update Property'),
                       ),
                     ),
                   ],
@@ -494,11 +505,35 @@ class _EditPropertyViewState extends State<EditPropertyView> {
   }
 
   Widget _buildInaccessibleDropdown() {
-    final List<Map<String, dynamic>> options = _getInaccessibleOptions();
+    final List<Map<String, dynamic>> rawOptions = _getInaccessibleOptions();
+    
+    // Deduplicate options by ID to prevent Flutter assertion errors
+    final Map<String, Map<String, dynamic>> uniqueOptionsMap = {};
+    for (final Map<String, dynamic> o in rawOptions) {
+      final String id = (o['id'] ?? o['value']).toString();
+      if (id.isNotEmpty && !uniqueOptionsMap.containsKey(id)) {
+        uniqueOptionsMap[id] = o;
+      }
+    }
+    final List<Map<String, dynamic>> options = uniqueOptionsMap.values.toList();
+    
+    // Convert value to string for comparison
+    final String? valueStr = _propertyInaccessible?.toString();
+    
+    // Only set value if it exists in deduplicated options and options are not empty
+    final String? validValue = (valueStr != null && 
+                                valueStr.isNotEmpty && 
+                                uniqueOptionsMap.containsKey(valueStr))
+        ? valueStr
+        : null;
+    
     return DropdownButtonFormField<String>(
       decoration: _decoration.copyWith(labelText: 'Property Inaccessible'),
       isExpanded: true,
-      value: _propertyInaccessible,
+      value: options.isEmpty ? null : validValue,
+      hint: options.isEmpty
+          ? const Text('Loading...', style: TextStyle(color: Colors.grey))
+          : null,
       items: options.isEmpty
           ? [
               const DropdownMenuItem<String>(
