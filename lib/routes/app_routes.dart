@@ -19,5 +19,6 @@ abstract class Routes {
   static const editAssessment = '/edit-assessment';
   static const userProfile = '/user-profile';
   static const propertySearch = '/property-search';
+  static const paymentSearch = '/payment-search';
 }
 

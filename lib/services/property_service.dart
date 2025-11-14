@@ -105,6 +105,66 @@ class PropertyService {
     }
   }
 
+  Future<Map<String, dynamic>> searchPayment({
+    required Map<String, dynamic> searchData,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    try {
+      Get.log('Payment search request: $searchData');
+      final dio.Response<dynamic> res = await _dio.post(
+        '/payment-search',
+        data: searchData,
+        options: options,
+      );
+      final Map<String, dynamic> response = _cast(res.data);
+      Get.log('Payment search response: $response');
+      return response;
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Payment search failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
+  Future<Map<String, dynamic>> submitPayment({
+    required Map<String, dynamic> payload,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    try {
+      Get.log('Payment submit request: $payload');
+      final dio.Response<dynamic> res = await _dio.post(
+        '/payment-insert',
+        data: payload,
+        options: options,
+      );
+      final Map<String, dynamic> response = _cast(res.data);
+      Get.log('Payment submit response: $response');
+      return response;
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Payment submit failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
   Future<Map<String, dynamic>> savePropertyMultipart({
     required Map<String, dynamic> fields,
     Map<String, dynamic>?

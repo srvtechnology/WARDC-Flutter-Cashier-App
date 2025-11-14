@@ -16,6 +16,7 @@ import '../views/property/edit_geo_view.dart';
 import '../views/property/edit_assessment_view.dart';
 import '../views/profile/user_profile_view.dart';
 import '../views/property/property_search_view.dart';
+import '../views/property/payment_search_view.dart';
 
 part 'app_routes.dart';
 
@@ -93,6 +94,10 @@ class AppPages {
     GetPage(
       name: Routes.propertySearch,
       page: () => const PropertySearchView(),
+    ),
+    GetPage(
+      name: Routes.paymentSearch,
+      page: () => const PaymentSearchView(),
     ),
   ];
 }
