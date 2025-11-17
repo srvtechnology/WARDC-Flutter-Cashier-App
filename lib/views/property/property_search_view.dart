@@ -552,3 +552,11 @@ class _PropertySearchItem extends StatelessWidget {
 
 
 
+
+
+
+
+
+
+
+

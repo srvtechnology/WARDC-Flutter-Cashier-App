@@ -21,14 +21,17 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
   
   // Payment form controllers
   final TextEditingController _payingAmountController = TextEditingController();
+  final TextEditingController _discountController = TextEditingController();
   final TextEditingController _chequeNoController = TextEditingController();
   final TextEditingController _payeeNameController = TextEditingController();
+  final TextEditingController _transactionIdController = TextEditingController();
   
   bool _isLoading = false;
   String _errorMessage = '';
   dynamic _searchResult;
   bool _hasSearched = false;
-  String _paymentType = 'Cheque'; // 'Cheque' or 'Cash'
+  // Payment type: 'Select', 'Cash', 'Cheque', 'Online'
+  String _paymentType = 'Select';
   String? _selectedPartPaymentYear;
   bool _isSavingPayment = false;
 
@@ -46,8 +49,10 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _payingAmountController.dispose();
+    _discountController.dispose();
     _chequeNoController.dispose();
     _payeeNameController.dispose();
+    _transactionIdController.dispose();
     super.dispose();
   }
 
@@ -72,10 +77,16 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     });
 
     try {
-      // Prepare search data - assuming property_id is the search field
-      // Adjust based on actual API requirements
+      // Determine search year
+      final String yearToUse =
+          _selectedPartPaymentYear ?? DateTime.now().year.toString();
+
+      // Prepare search data as per API
       final searchData = {
         'property_id': searchQuery,
+        'old_digital_address': '',
+        'digital_address': '',
+        'year': int.tryParse(yearToUse) ?? yearToUse,
       };
 
       final response = await _propertyService.searchPayment(
@@ -353,7 +364,9 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
 
     final property = result['property'] as Map<String, dynamic>? ?? {};
     final allAssessments = result['allAssesments'] as List? ?? [];
-    final propertyAssessment = result['propertyAssesment'] as Map<String, dynamic>?;
+    final propertyAssessment =
+        result['propertyAssesment'] as Map<String, dynamic>? ??
+        (allAssessments.isNotEmpty ? allAssessments.first as Map<String, dynamic>? : null);
     final amountPaid = (result['amountPaid'] as num?)?.toDouble() ?? 0.0;
 
     // Extract assessment data - check multiple possible locations
@@ -364,36 +377,17 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
       currentAssessment = propertyAssessment;
     }
 
-    // Calculate values - check property object first, then assessment
-    final assessedValue2025 = _getNumericValue(
-      property['current_year_assessment_amount'] ??
-      property['assessed_value_2025'] ??
-      property['assessed_value'] ??
-      currentAssessment?['current_year_assessment_amount'] ??
-      currentAssessment?['assessed_value_2025'] ??
-      currentAssessment?['assessed_value'],
-    );
-    
-    final arrearDue = _getNumericValue(
-      property['arrear_due'] ??
-      property['arrears'] ??
-      property['due'] ??
-      currentAssessment?['arrear_due'] ??
-      currentAssessment?['arrears'] ??
-      currentAssessment?['due'],
-    );
-    
-    final penalty = _getNumericValue(
-      property['penalty'] ??
-      currentAssessment?['penalty'],
-    );
-    
+    // Calculate values using payment-search response (match web Payment Form)
+    final assessedValue2025 =
+        _getNumericValue(propertyAssessment?['current_year_assessment_amount']);
+    final arrearDue = _getNumericValue(propertyAssessment?['arrear_calc']);
+    final penalty = _getNumericValue(propertyAssessment?['newpenalty']);
     final amountPaid2025 = amountPaid;
-    
-    final balanceDue = assessedValue2025 + arrearDue + penalty - amountPaid2025;
+    final dueAmount = _getNumericValue(propertyAssessment?['due']);
+    final balanceDue = dueAmount;
 
-    // Get property owner
-    final propertyOwner = _getPropertyOwner(property);
+    // Property ID for header
+    final propertyIdForHeader = _getPropertyId(property, propertyAssessment) ?? '';
 
     // Get available years for part payment
     final availableYears = _getAvailableYears(allAssessments);
@@ -404,32 +398,38 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     }
     final selectedYear = _selectedPartPaymentYear ?? availableYears.first;
 
-    final propertyId = _getPropertyId(property);
+    final propertyId = _getPropertyId(property, propertyAssessment);
     final assessmentId = _getAssessmentId(property, currentAssessment);
     final paymentYear = selectedYear;
-    final totalAmount = assessedValue2025 + arrearDue + penalty;
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Property Details Card
+          // Header & Property Details Card
+          const Text(
+            'Payment Information',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Property ID: $propertyIdForHeader',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 16),
           _PropertyDetailsCard(
-            propertyOwner: propertyOwner,
             assessedValue2025: assessedValue2025,
             arrearDue: arrearDue,
+            dueAmount: dueAmount,
             penalty: penalty,
             amountPaid2025: amountPaid2025,
             balanceDue: balanceDue,
-            onViewDetails: () {
-              // Navigate to property details if needed
-              Get.snackbar(
-                'Info',
-                'View Details functionality',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
           ),
           const SizedBox(height: 16),
           
@@ -437,6 +437,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
           _PaymentInputCard(
             balanceDue: balanceDue,
             payingAmountController: _payingAmountController,
+            discountController: _discountController,
             paymentType: _paymentType,
             onPaymentTypeChanged: (type) {
               setState(() {
@@ -452,6 +453,10 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
             },
             chequeNoController: _chequeNoController,
             payeeNameController: _payeeNameController,
+            transactionIdController: _transactionIdController,
+            onAmountsChanged: () {
+              setState(() {});
+            },
             isSaving: _isSavingPayment,
             onSave: assessmentId != null && propertyId != null
                 ? () => _handleSavePayment(
@@ -459,39 +464,12 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
                       assessmentId: assessmentId,
                       paymentYear: paymentYear,
                       balanceDue: balanceDue,
-                      totalAmount: totalAmount,
                     )
                 : null,
           ),
         ],
       ),
     );
-  }
-
-  String _getPropertyOwner(Map<String, dynamic> property) {
-    // Try to get landlord information
-    final landlord = property['landlord'] as Map<String, dynamic>?;
-    if (landlord != null) {
-      final firstName = landlord['first_name']?.toString() ?? '';
-      final middleName = landlord['middle_name']?.toString() ?? '';
-      final surname = landlord['surname']?.toString() ?? '';
-      final orgName = landlord['organization_name']?.toString();
-      
-      if (orgName != null && orgName.isNotEmpty) {
-        return orgName;
-      }
-      
-      final parts = [firstName, middleName, surname]
-          .where((p) => p.isNotEmpty && p != 'null')
-          .toList();
-      if (parts.isNotEmpty) {
-        return parts.join(' ');
-      }
-    }
-    
-    return property['property_owner']?.toString() ?? 
-           property['owner_name']?.toString() ?? 
-           'N/A';
   }
 
   double _getNumericValue(dynamic value) {
@@ -527,9 +505,15 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     return years.isNotEmpty ? years : ['2024', '2025'];
   }
 
-  String? _getPropertyId(Map<String, dynamic> property) {
+  String? _getPropertyId(
+    Map<String, dynamic> property,
+    Map<String, dynamic>? assessment,
+  ) {
     final dynamic id =
-        property['id'] ?? property['property_id'] ?? property['propertyId'];
+        property['id'] ??
+        property['property_id'] ??
+        property['propertyId'] ??
+        assessment?['property_id'];
     return id?.toString();
   }
 
@@ -550,9 +534,9 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     required String assessmentId,
     required String paymentYear,
     required double balanceDue,
-    required double totalAmount,
   }) async {
     final payingAmount = double.tryParse(_payingAmountController.text.trim()) ?? 0.0;
+    final discountOffered = double.tryParse(_discountController.text.trim()) ?? 0.0;
     
     if (payingAmount <= 0) {
       Get.snackbar(
@@ -565,10 +549,10 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
       return;
     }
 
-    if (payingAmount > balanceDue) {
+    if (discountOffered < 0) {
       Get.snackbar(
         'Error',
-        'Payment amount cannot exceed balance due',
+        'Discount offered cannot be negative',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
@@ -576,18 +560,34 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
       return;
     }
 
-    if (_paymentType == 'Cheque') {
-      if (_chequeNoController.text.trim().isEmpty) {
-        Get.snackbar(
-          'Error',
-          'Please enter cheque number',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
-      if (_payeeNameController.text.trim().isEmpty) {
+    if (payingAmount + discountOffered > balanceDue) {
+      Get.snackbar(
+        'Error',
+        'Payment + discount cannot exceed balance due',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    if (_paymentType == 'Select') {
+      Get.snackbar(
+        'Error',
+        'Please select a payment type',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final payeeName = _payeeNameController.text.trim();
+    final chequeNo = _chequeNoController.text.trim();
+    final transactionId = _transactionIdController.text.trim();
+
+    if (_paymentType == 'Cash') {
+      if (payeeName.isEmpty) {
         Get.snackbar(
           'Error',
           'Please enter payee name',
@@ -597,22 +597,45 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
         );
         return;
       }
+    } else if (_paymentType == 'Online') {
+      if (payeeName.isEmpty || transactionId.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'Please enter payee name and transaction ID',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
+    } else if (_paymentType == 'Cheque') {
+      if (payeeName.isEmpty || chequeNo.isEmpty) {
+        Get.snackbar(
+          'Error',
+          'Please enter payee name and cheque number',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return;
+      }
     }
+
+    final remainingDue =
+        (balanceDue - payingAmount - discountOffered).clamp(0.0, balanceDue);
 
     final payload = <String, dynamic>{
       'assessment_id': int.tryParse(assessmentId) ?? assessmentId,
       'property_id': int.tryParse(propertyId) ?? propertyId,
       'payment_year': paymentYear,
       'paying_amount': payingAmount.toString(),
-      'total_amount': totalAmount,
+      'discount_offered': discountOffered.toString(),
       'payment_type': _paymentType.toLowerCase(),
-      'due': balanceDue,
+      'cheque_no': _paymentType == 'Cheque' ? chequeNo : '',
+      'transaction_id': _paymentType == 'Online' ? transactionId : '',
+      'payee_name': payeeName,
+      'due': remainingDue.toStringAsFixed(2),
     };
-
-    if (_paymentType == 'Cheque') {
-      payload['cheque_no'] = _chequeNoController.text.trim();
-      payload['payee_name'] = _payeeNameController.text.trim();
-    }
 
     try {
       FocusScope.of(context).unfocus();
@@ -631,6 +654,8 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
       _payingAmountController.clear();
       _chequeNoController.clear();
       _payeeNameController.clear();
+      _discountController.clear();
+      _transactionIdController.clear();
       await _performSearch();
     } catch (e) {
       Get.snackbar(
@@ -653,22 +678,20 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
 // Property Details Card Widget
 class _PropertyDetailsCard extends StatelessWidget {
   const _PropertyDetailsCard({
-    required this.propertyOwner,
     required this.assessedValue2025,
     required this.arrearDue,
+    required this.dueAmount,
     required this.penalty,
     required this.amountPaid2025,
     required this.balanceDue,
-    required this.onViewDetails,
   });
 
-  final String propertyOwner;
   final double assessedValue2025;
   final double arrearDue;
+  final double dueAmount;
   final double penalty;
   final double amountPaid2025;
   final double balanceDue;
-  final VoidCallback onViewDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -682,44 +705,28 @@ class _PropertyDetailsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Property Details',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              ElevatedButton(
-                onPressed: onViewDetails,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'View Details',
-                  style: TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
+          const Text(
+            'Payment Form',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 16),
-          _DetailRow(label: 'Property Owner', value: propertyOwner),
-          const SizedBox(height: 12),
           _DetailRow(
-            label: 'Assessed Value 2025',
+            label: '2025 Assessment',
             value: _formatCurrency(assessedValue2025),
           ),
           const SizedBox(height: 12),
           _DetailRow(
-            label: 'Arrear Due',
+            label: 'Arrear',
             value: _formatCurrency(arrearDue),
+          ),
+          const SizedBox(height: 12),
+          _DetailRow(
+            label: 'Due',
+            value: _formatCurrency(dueAmount),
           ),
           const SizedBox(height: 12),
           _DetailRow(
@@ -733,8 +740,8 @@ class _PropertyDetailsCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _DetailRow(
-            label: 'Balance Due',
-            value: _formatCurrency(balanceDue),
+            label: 'Balance',
+            value: _formatCurrency(dueAmount),
             isHighlighted: true,
           ),
         ],
@@ -743,7 +750,8 @@ class _PropertyDetailsCard extends StatelessWidget {
   }
 
   String _formatCurrency(double amount) {
-    return 'Le ${amount.toStringAsFixed(2)}';
+    // Show raw numeric value (no currency prefix) like the web form
+    return amount.toStringAsFixed(2);
   }
 }
 
@@ -789,6 +797,7 @@ class _PaymentInputCard extends StatelessWidget {
   const _PaymentInputCard({
     required this.balanceDue,
     required this.payingAmountController,
+    required this.discountController,
     required this.paymentType,
     required this.onPaymentTypeChanged,
     required this.selectedPartPaymentYear,
@@ -796,12 +805,15 @@ class _PaymentInputCard extends StatelessWidget {
     required this.onPartPaymentYearChanged,
     required this.chequeNoController,
     required this.payeeNameController,
+    required this.transactionIdController,
+    required this.onAmountsChanged,
     required this.isSaving,
     required this.onSave,
   });
 
   final double balanceDue;
   final TextEditingController payingAmountController;
+  final TextEditingController discountController;
   final String paymentType;
   final ValueChanged<String> onPaymentTypeChanged;
   final String? selectedPartPaymentYear;
@@ -809,11 +821,18 @@ class _PaymentInputCard extends StatelessWidget {
   final ValueChanged<String?> onPartPaymentYearChanged;
   final TextEditingController chequeNoController;
   final TextEditingController payeeNameController;
+  final TextEditingController transactionIdController;
+  final VoidCallback onAmountsChanged;
   final bool isSaving;
   final VoidCallback? onSave;
 
+  double _parse(TextEditingController c) =>
+      double.tryParse(c.text.trim()) ?? 0.0;
+
   @override
   Widget build(BuildContext context) {
+    final double totalAmount =
+        _parse(payingAmountController) + _parse(discountController);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -825,7 +844,7 @@ class _PaymentInputCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Payment',
+            'Payment Form',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -833,52 +852,89 @@ class _PaymentInputCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
-          // Paying Amount
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Amount Due',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Le ${balanceDue.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
+
+          // Paying Amount (full width)
+          const Text(
+            'Paying Amount',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: payingAmountController,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => onAmountsChanged(),
+            decoration: InputDecoration(
+              hintText: 'Enter Amount Paying',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: payingAmountController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'Enter Amount Paying',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 12,
-                    ),
-                  ),
-                ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
               ),
-            ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Discount Offered (full width)
+          const Text(
+            'Discount Offered',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: discountController,
+            keyboardType: TextInputType.number,
+            onChanged: (_) => onAmountsChanged(),
+            decoration: InputDecoration(
+              hintText: 'Enter Discount',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Total Amount (read-only, full width)
+          const Text(
+            'Total Amount',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              totalAmount.toStringAsFixed(2),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           
@@ -892,83 +948,41 @@ class _PaymentInputCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: RadioListTile<String>(
-                  title: const Text('Cheque'),
-                  value: 'Cheque',
-                  groupValue: paymentType,
-                  onChanged: (value) {
-                    if (value != null) onPaymentTypeChanged(value);
-                  },
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
+          DropdownButtonFormField<String>(
+            value: paymentType == 'Select' ? null : paymentType,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-              Expanded(
-                child: RadioListTile<String>(
-                  title: const Text('Cash'),
-                  value: 'Cash',
-                  groupValue: paymentType,
-                  onChanged: (value) {
-                    if (value != null) onPaymentTypeChanged(value);
-                  },
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 12,
+              ),
+            ),
+            hint: const Text('Select'),
+            items: const [
+              DropdownMenuItem(
+                value: 'Cash',
+                child: Text('Cash'),
+              ),
+              DropdownMenuItem(
+                value: 'Cheque',
+                child: Text('Cheque'),
+              ),
+              DropdownMenuItem(
+                value: 'Online',
+                child: Text('Online'),
               ),
             ],
+            onChanged: (value) {
+              if (value != null) onPaymentTypeChanged(value);
+            },
           ),
           const SizedBox(height: 16),
           
-          // Balance Due
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Amount Due',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Le ${balanceDue.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: OutlinedButton(
-                  onPressed: () {
-                    payingAmountController.text = balanceDue.toStringAsFixed(2);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: Colors.grey.shade400),
-                  ),
-                  child: const Text('Balance Due'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Part Payment
+          // Adjust Paying Year
           const Text(
-            'Part Payment',
+            'Adjust Paying Year',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -1016,8 +1030,27 @@ class _PaymentInputCard extends StatelessWidget {
             const SizedBox(height: 16),
           ],
           
-          // Payee Name (only if Cheque is selected)
-          if (paymentType == 'Cheque') ...[
+          // Transaction Id (only if Online is selected)
+          if (paymentType == 'Online') ...[
+            TextField(
+              controller: transactionIdController,
+              decoration: InputDecoration(
+                labelText: 'Transaction Id',
+                hintText: 'Enter Transaction Id',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Payee Name (for all non-select payment types)
+          if (paymentType != 'Select') ...[
             TextField(
               controller: payeeNameController,
               decoration: InputDecoration(
@@ -1041,7 +1074,7 @@ class _PaymentInputCard extends StatelessWidget {
             child: ElevatedButton(
               onPressed: (onSave == null || isSaving) ? null : onSave,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: const Color(0xFF2E7D32),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -1058,7 +1091,7 @@ class _PaymentInputCard extends StatelessWidget {
                       ),
                     )
                   : const Text(
-                      'Save',
+                      'Submit Payment',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
