@@ -5,6 +5,7 @@ import 'package:map_launcher/map_launcher.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
+import '../../utils/api_config.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   const PropertyDetailsView({
@@ -22,24 +23,9 @@ class PropertyDetailsView extends StatefulWidget {
 class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   final RxInt _step = 0.obs;
 
-  // Storage base URL for images
-  static const String _storageBaseUrl =
-      'http://13.232.84.109/apis/storage/app/public/';
-
   Map<String, dynamic> get prop => widget.property;
 
   String _text(dynamic v) => v?.toString() ?? '—';
-
-  String _getImageUrl(String? imagePath) {
-    if (imagePath == null || imagePath.isEmpty || imagePath == '—') {
-      return '';
-    }
-    // Remove leading slash if present
-    final String cleanPath = imagePath.startsWith('/')
-        ? imagePath.substring(1)
-        : imagePath;
-    return '$_storageBaseUrl$cleanPath';
-  }
 
   Widget _buildImageDisplay(String imagePath) {
     if (imagePath.isEmpty || imagePath == '—') {
@@ -52,7 +38,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       );
     }
 
-    final String imageUrl = _getImageUrl(imagePath);
+    final String imageUrl = ApiConfig.getImageUrl(imagePath);
 
     return GestureDetector(
       onTap: () {

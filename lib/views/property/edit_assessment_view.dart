@@ -8,6 +8,7 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
+import '../../utils/api_config.dart';
 
 class EditAssessmentView extends StatefulWidget {
   const EditAssessmentView({super.key, required this.property});
@@ -47,7 +48,8 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   bool _isSubmitting = false;
 
   Map<String, dynamic> get _assessmentsObject {
-    final List<dynamic>? assessments = widget.property['assessments_object'] as List?;
+    final List<dynamic>? assessments =
+        widget.property['assessments_object'] as List?;
     if (assessments != null && assessments.isNotEmpty) {
       return Map<String, dynamic>.from((assessments[0] as Map? ?? {}));
     }
@@ -83,7 +85,8 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     }
 
     // Initialize values_added
-    final List<dynamic>? valuesAdded = _assessmentsObject['values_added'] as List?;
+    final List<dynamic>? valuesAdded =
+        _assessmentsObject['values_added'] as List?;
     if (valuesAdded != null) {
       for (final val in valuesAdded) {
         if (val is Map && val['id'] != null) {
@@ -98,18 +101,23 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     _windowType = _assessmentsObject['property_window_type']?.toString();
     _propertyUse = _assessmentsObject['property_use']?.toString();
     _zone = _assessmentsObject['zone']?.toString();
-    _swimmingPool = _assessmentsObject['swimming_id']?.toString() ??
+    _swimmingPool =
+        _assessmentsObject['swimming_id']?.toString() ??
         _assessmentsObject['swimming_pool']?.toString();
     _gatedCommunity = _assessmentsObject['gated_community']?.toString() ?? '0';
 
     // Initialize text fields
     _controllers['length'] = TextEditingController(
-      text: _assessmentsObject['assessment_length']?.toString() ??
-          _assessmentsObject['length']?.toString() ?? '',
+      text:
+          _assessmentsObject['assessment_length']?.toString() ??
+          _assessmentsObject['length']?.toString() ??
+          '',
     );
     _controllers['breadth'] = TextEditingController(
-      text: _assessmentsObject['assessment_breadth']?.toString() ??
-          _assessmentsObject['breadth']?.toString() ?? '',
+      text:
+          _assessmentsObject['assessment_breadth']?.toString() ??
+          _assessmentsObject['breadth']?.toString() ??
+          '',
     );
     _controllers['no_of_shop'] = TextEditingController(
       text: _assessmentsObject['no_of_shop']?.toString() ?? '',
@@ -142,7 +150,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         _variables = {'data': data};
         _loadingVars = false;
       });
-      
+
       // Load council adjustments after variables are loaded
       setState(() {
         _loadCouncilAdjustments();
@@ -156,13 +164,14 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     if (_variables == null) return;
     final data = _variables!['data'] as Map<String, dynamic>?;
     if (data == null) return;
-    
+
     // Try to parse existing adjustments from assessmentsObject
     // Council adjustments might be stored as a list of IDs or as full objects
-    final dynamic councilRaw = _assessmentsObject['council'] ?? 
-                               _assessmentsObject['council_adjustments'] ??
-                               _assessmentsObject['councils'];
-    
+    final dynamic councilRaw =
+        _assessmentsObject['council'] ??
+        _assessmentsObject['council_adjustments'] ??
+        _assessmentsObject['councils'];
+
     if (councilRaw is List) {
       for (final item in councilRaw) {
         if (item is Map && item['id'] != null) {
@@ -210,7 +219,8 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
           final raw = data['council_adjustments'];
           if (raw is List) {
             for (final adj in raw) {
-              if (adj is Map && _selectedCouncilAdjustments.contains(adj['id'] as int)) {
+              if (adj is Map &&
+                  _selectedCouncilAdjustments.contains(adj['id'] as int)) {
                 councilAdjustments.add(Map<String, dynamic>.from(adj));
               }
             }
@@ -231,11 +241,16 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         'gated_community': _gatedCommunity ?? '0',
         'no_of_shop': _controllers['no_of_shop']!.text.trim(),
         'no_of_mast': _controllers['no_of_mast']!.text.trim(),
-        'no_of_compound_house': _controllers['no_of_compound_house']!.text.trim(),
+        'no_of_compound_house': _controllers['no_of_compound_house']!.text
+            .trim(),
         'compound_name': _controllers['compound_name']!.text.trim(),
-        'property_categories': _selectedCategories.map((e) => e.toString()).toList(),
+        'property_categories': _selectedCategories
+            .map((e) => e.toString())
+            .toList(),
         'property_types': _selectedTypes.map((e) => e.toString()).toList(),
-        'property_value_added': _selectedValueAdded.map((e) => e.toString()).toList(),
+        'property_value_added': _selectedValueAdded
+            .map((e) => e.toString())
+            .toList(),
         'council': councilAdjustments.map((e) => e['id'].toString()).toList(),
         'council_year': DateTime.now().year.toString(),
       };
@@ -252,7 +267,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
       );
 
       ToastService.showSuccess('Assessment information updated successfully');
-      
+
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
       ToastService.showError('Failed to update assessment: $e');
@@ -268,323 +283,365 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Assessment')),
       body: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionCard(
-                      title: 'Classification',
-                      children: [
-                        _buildMultiSelectChips(
-                          'property_categories',
-                          'Select Category',
-                          _selectedCategories,
-                          (selected) {
-                            setState(() {
-                              _selectedCategories.clear();
-                              _selectedCategories.addAll(selected);
-                            });
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionCard(
+                title: 'Classification',
+                children: [
+                  _buildMultiSelectChips(
+                    'property_categories',
+                    'Select Category',
+                    _selectedCategories,
+                    (selected) {
+                      setState(() {
+                        _selectedCategories.clear();
+                        _selectedCategories.addAll(selected);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMultiSelectChips(
+                    'property_types',
+                    'Select Types',
+                    _selectedTypes,
+                    (selected) {
+                      setState(() {
+                        _selectedTypes.clear();
+                        _selectedTypes.addAll(selected);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildMultiSelectChips(
+                    'property_value_added',
+                    'Select property value added',
+                    _selectedValueAdded,
+                    (selected) {
+                      setState(() {
+                        _selectedValueAdded.clear();
+                        _selectedValueAdded.addAll(selected);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCouncilAdjustmentsChips(),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Materials',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSingleSelectDropdown(
+                          'property_wall_materials',
+                          'Wall Material',
+                          _wallMaterials,
+                          (v) => setState(() => _wallMaterials = v),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildSingleSelectDropdown(
+                          'property_roofs_materials',
+                          'Roof Material',
+                          _roofsMaterials,
+                          (v) => setState(() => _roofsMaterials = v),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSingleSelectDropdown(
+                    'property_window_types',
+                    'Window Type',
+                    _windowType,
+                    (v) => setState(() => _windowType = v),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Dimensions',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          key: const ValueKey('length_field'),
+                          controller: _controllers['length'],
+                          decoration: _decoration.copyWith(labelText: 'length'),
+                          keyboardType: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            DecimalInputFormatter(decimalPlaces: 2),
+                          ],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) {
+                            final breadthValue = _controllers['breadth']?.text;
+                            final decimalError =
+                                ValidationUtils.validateDecimal(
+                                  v,
+                                  decimalPlaces: 2,
+                                  isRequired: false,
+                                );
+                            if (decimalError != null) return decimalError;
+                            return ValidationUtils.validateLengthGreaterThanBreadth(
+                              v,
+                              breadthValue,
+                            );
+                          },
+                          onChanged: (v) {
+                            // Trigger validation on breadth field when length changes
+                            if (_formKey.currentState != null) {
+                              _formKey.currentState!.validate();
+                            }
                           },
                         ),
-                        const SizedBox(height: 16),
-                        _buildMultiSelectChips(
-                          'property_types',
-                          'Select Types',
-                          _selectedTypes,
-                          (selected) {
-                            setState(() {
-                              _selectedTypes.clear();
-                              _selectedTypes.addAll(selected);
-                            });
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          key: const ValueKey('breadth_field'),
+                          controller: _controllers['breadth'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'breadth',
+                          ),
+                          keyboardType: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: [
+                            DecimalInputFormatter(decimalPlaces: 2),
+                          ],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) {
+                            final lengthValue = _controllers['length']?.text;
+                            return ValidationUtils.validateLengthGreaterThanBreadth(
+                              lengthValue,
+                              v,
+                            );
+                          },
+                          onChanged: (v) {
+                            // Trigger validation on length field when breadth changes
+                            if (_formKey.currentState != null) {
+                              _formKey.currentState!.validate();
+                            }
                           },
                         ),
-                        const SizedBox(height: 16),
-                        _buildMultiSelectChips(
-                          'property_value_added',
-                          'Select property value added',
-                          _selectedValueAdded,
-                          (selected) {
-                            setState(() {
-                              _selectedValueAdded.clear();
-                              _selectedValueAdded.addAll(selected);
-                            });
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Property Details',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSingleSelectDropdown(
+                          'property_uses',
+                          'Property use',
+                          _propertyUse,
+                          (v) => setState(() => _propertyUse = v),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildSingleSelectDropdown(
+                          'property_zones',
+                          'Property zone',
+                          _zone,
+                          (v) => setState(() => _zone = v),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSingleSelectDropdown(
+                          'swimmings',
+                          'Swimming pool',
+                          _swimmingPool,
+                          (v) => setState(() => _swimmingPool = v),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          decoration: _decoration.copyWith(
+                            labelText: 'Gated community',
+                          ),
+                          value:
+                              (_gatedCommunity == '0' || _gatedCommunity == '1')
+                              ? _gatedCommunity
+                              : '0', // Default to '0' if invalid value
+                          isExpanded: true,
+                          selectedItemBuilder: (BuildContext context) {
+                            return const [
+                              Text('No', overflow: TextOverflow.ellipsis),
+                              Text('Yes', overflow: TextOverflow.ellipsis),
+                            ];
                           },
-                        ),
-                        const SizedBox(height: 16),
-                        _buildCouncilAdjustmentsChips(),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Materials',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildSingleSelectDropdown(
-                                'property_wall_materials',
-                                'Wall Material',
-                                _wallMaterials,
-                                (v) => setState(() => _wallMaterials = v),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildSingleSelectDropdown(
-                                'property_roofs_materials',
-                                'Roof Material',
-                                _roofsMaterials,
-                                (v) => setState(() => _roofsMaterials = v),
-                              ),
-                            ),
+                          items: const [
+                            DropdownMenuItem(value: '0', child: Text('No')),
+                            DropdownMenuItem(value: '1', child: Text('Yes')),
                           ],
+                          onChanged: (v) => setState(() => _gatedCommunity = v),
                         ),
-                        const SizedBox(height: 12),
-                        _buildSingleSelectDropdown(
-                          'property_window_types',
-                          'Window Type',
-                          _windowType,
-                          (v) => setState(() => _windowType = v),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Dimensions',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                key: const ValueKey('length_field'),
-                                controller: _controllers['length'],
-                                decoration: _decoration.copyWith(labelText: 'length'),
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) {
-                                  final breadthValue = _controllers['breadth']?.text;
-                                  final decimalError = ValidationUtils.validateDecimal(v, decimalPlaces: 2, isRequired: false);
-                                  if (decimalError != null) return decimalError;
-                                  return ValidationUtils.validateLengthGreaterThanBreadth(v, breadthValue);
-                                },
-                                onChanged: (v) {
-                                  // Trigger validation on breadth field when length changes
-                                  if (_formKey.currentState != null) {
-                                    _formKey.currentState!.validate();
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                key: const ValueKey('breadth_field'),
-                                controller: _controllers['breadth'],
-                                decoration: _decoration.copyWith(labelText: 'breadth'),
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) {
-                                  final lengthValue = _controllers['length']?.text;
-                                  return ValidationUtils.validateLengthGreaterThanBreadth(lengthValue, v);
-                                },
-                                onChanged: (v) {
-                                  // Trigger validation on length field when breadth changes
-                                  if (_formKey.currentState != null) {
-                                    _formKey.currentState!.validate();
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Property Details',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildSingleSelectDropdown(
-                                'property_uses',
-                                'Property use',
-                                _propertyUse,
-                                (v) => setState(() => _propertyUse = v),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildSingleSelectDropdown(
-                                'property_zones',
-                                'Property zone',
-                                _zone,
-                                (v) => setState(() => _zone = v),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildSingleSelectDropdown(
-                                'swimmings',
-                                'Swimming pool',
-                                _swimmingPool,
-                                (v) => setState(() => _swimmingPool = v),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Gated community',
-                                ),
-                                value: (_gatedCommunity == '0' || _gatedCommunity == '1')
-                                    ? _gatedCommunity
-                                    : '0', // Default to '0' if invalid value
-                                isExpanded: true,
-                                selectedItemBuilder: (BuildContext context) {
-                                  return const [
-                                    Text('No', overflow: TextOverflow.ellipsis),
-                                    Text('Yes', overflow: TextOverflow.ellipsis),
-                                  ];
-                                },
-                                items: const [
-                                  DropdownMenuItem(value: '0', child: Text('No')),
-                                  DropdownMenuItem(value: '1', child: Text('Yes')),
-                                ],
-                                onChanged: (v) => setState(() => _gatedCommunity = v),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Additional Information',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['no_of_mast'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'No of Masts',
-                                ),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [IntegerInputFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['no_of_shop'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'No of Shops',
-                                ),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [IntegerInputFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['no_of_compound_house'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'No of Compound House',
-                                ),
-                                keyboardType: TextInputType.number,
-                                inputFormatters: [IntegerInputFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['compound_name'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Compound Name',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Property Images',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _AssessmentImageBox(
-                                label: 'Image 1',
-                                imagePath: _assessmentImage1Path,
-                                existingImageUrl: _assessmentsObject['assessment_images_1']?.toString(),
-                                onPick: () => _pickImage(1),
-                                onRemove: () => setState(() => _assessmentImage1Path = null),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _AssessmentImageBox(
-                                label: 'Image 2',
-                                imagePath: _assessmentImage2Path,
-                                existingImageUrl: _assessmentsObject['assessment_images_2']?.toString(),
-                                onPick: () => _pickImage(2),
-                                onRemove: () => setState(() => _assessmentImage2Path = null),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Additional Information',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['no_of_mast'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'No of Masts',
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [IntegerInputFormatter()],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) => ValidationUtils.validateInteger(
+                            v,
+                            min: 0,
+                            isRequired: false,
                           ),
                         ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Assessment'),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['no_of_shop'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'No of Shops',
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [IntegerInputFormatter()],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) => ValidationUtils.validateInteger(
+                            v,
+                            min: 0,
+                            isRequired: false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['no_of_compound_house'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'No of Compound House',
+                          ),
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [IntegerInputFormatter()],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) => ValidationUtils.validateInteger(
+                            v,
+                            min: 0,
+                            isRequired: false,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['compound_name'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'Compound Name',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Property Images',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AssessmentImageBox(
+                          label: 'Image 1',
+                          imagePath: _assessmentImage1Path,
+                          existingImageUrl:
+                              _assessmentsObject['assessment_images_1']
+                                  ?.toString(),
+                          onPick: () => _pickImage(1),
+                          onRemove: () =>
+                              setState(() => _assessmentImage1Path = null),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _AssessmentImageBox(
+                          label: 'Image 2',
+                          imagePath: _assessmentImage2Path,
+                          existingImageUrl:
+                              _assessmentsObject['assessment_images_2']
+                                  ?.toString(),
+                          onPick: () => _pickImage(2),
+                          onRemove: () =>
+                              setState(() => _assessmentImage2Path = null),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Update Assessment'),
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -624,11 +681,16 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   }
 
   Widget _buildCouncilAdjustmentsChips() {
-    final List<Map<String, dynamic>> options = _getOptions('council_adjustments');
+    final List<Map<String, dynamic>> options = _getOptions(
+      'council_adjustments',
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Select Council', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text(
+          'Select Council',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: 6),
         Wrap(
           spacing: 8,
@@ -660,7 +722,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     Function(String?) onChanged,
   ) {
     final List<Map<String, dynamic>> rawOptions = _getOptions(dataKey);
-    
+
     // If options are not loaded yet, return dropdown with null value
     if (rawOptions.isEmpty) {
       return DropdownButtonFormField<String>(
@@ -678,7 +740,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         onChanged: null,
       );
     }
-    
+
     // Deduplicate options by ID to prevent Flutter assertion errors
     final Map<String, Map<String, dynamic>> uniqueOptionsMap = {};
     for (final Map<String, dynamic> o in rawOptions) {
@@ -688,33 +750,34 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
       }
     }
     final List<Map<String, dynamic>> options = uniqueOptionsMap.values.toList();
-    
+
     // Convert value to string for comparison
     final String? valueStr = value?.toString();
-    
+
     // Only set value if it exists in deduplicated options and options are not empty
-    final String? validValue = (valueStr != null && 
-                                valueStr.isNotEmpty && 
-                                uniqueOptionsMap.containsKey(valueStr))
+    final String? validValue =
+        (valueStr != null &&
+            valueStr.isNotEmpty &&
+            uniqueOptionsMap.containsKey(valueStr))
         ? valueStr
         : null;
-    
+
     // Create items list ensuring no duplicates
-    final List<DropdownMenuItem<String>> items = options
-        .map((o) {
-          final String itemValue = (o['id'] ?? o['value']).toString();
-          return DropdownMenuItem<String>(
-            value: itemValue,
-            child: Text(
-              o['label']?.toString() ?? 'Item',
-              overflow: TextOverflow.ellipsis,
-            ),
-          );
-        })
-        .toList();
-    
+    final List<DropdownMenuItem<String>> items = options.map((o) {
+      final String itemValue = (o['id'] ?? o['value']).toString();
+      return DropdownMenuItem<String>(
+        value: itemValue,
+        child: Text(
+          o['label']?.toString() ?? 'Item',
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }).toList();
+
     // Verify no duplicate values in items
-    final Set<String> itemValues = items.map((item) => item.value ?? '').toSet();
+    final Set<String> itemValues = items
+        .map((item) => item.value ?? '')
+        .toSet();
     if (itemValues.length != items.length) {
       // If duplicates found, filter them out
       final Map<String, DropdownMenuItem<String>> uniqueItems = {};
@@ -723,15 +786,18 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
           uniqueItems[item.value!] = item;
         }
       }
-      final List<DropdownMenuItem<String>> deduplicatedItems = uniqueItems.values.toList();
-      
+      final List<DropdownMenuItem<String>> deduplicatedItems = uniqueItems
+          .values
+          .toList();
+
       // Re-validate value against deduplicated items
-      final String? finalValue = (valueStr != null && 
-                                  valueStr.isNotEmpty && 
-                                  uniqueItems.containsKey(valueStr))
+      final String? finalValue =
+          (valueStr != null &&
+              valueStr.isNotEmpty &&
+              uniqueItems.containsKey(valueStr))
           ? valueStr
           : null;
-      
+
       return DropdownButtonFormField<String>(
         decoration: _decoration.copyWith(labelText: label),
         value: finalValue,
@@ -749,7 +815,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         onChanged: onChanged,
       );
     }
-    
+
     return DropdownButtonFormField<String>(
       decoration: _decoration.copyWith(labelText: label),
       value: validValue,
@@ -773,7 +839,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     if (_variables == null) return const [];
     final data = _variables!['data'] as Map<String, dynamic>?;
     if (data == null) return const [];
-    
+
     final raw = data[dataKey];
     if (raw is List) {
       return raw
@@ -785,16 +851,16 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   }
 
   InputDecoration get _decoration => const InputDecoration(
-        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green, width: 2),
-        ),
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      );
+    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green, width: 2),
+    ),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  );
 }
 
 class _SectionCard extends StatelessWidget {
@@ -848,8 +914,12 @@ class _AssessmentImageBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasLocalImage = imagePath != null && imagePath!.isNotEmpty && File(imagePath!).existsSync();
-    final bool hasExistingImage = existingImageUrl != null && existingImageUrl!.isNotEmpty;
+    final bool hasLocalImage =
+        imagePath != null &&
+        imagePath!.isNotEmpty &&
+        File(imagePath!).existsSync();
+    final bool hasExistingImage =
+        existingImageUrl != null && existingImageUrl!.isNotEmpty;
     final bool hasImage = hasLocalImage || hasExistingImage;
 
     return InkWell(
@@ -872,16 +942,23 @@ class _AssessmentImageBox extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.network(
-                  'http://13.232.84.109/apis/storage/app/public/$existingImageUrl',
+                  ApiConfig.getImageUrl(existingImageUrl),
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) {
                     return Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.camera_alt, size: 42, color: Colors.black54),
+                          const Icon(
+                            Icons.camera_alt,
+                            size: 42,
+                            color: Colors.black54,
+                          ),
                           const SizedBox(height: 8),
-                          Text(label, style: const TextStyle(color: Colors.black54)),
+                          Text(
+                            label,
+                            style: const TextStyle(color: Colors.black54),
+                          ),
                         ],
                       ),
                     );
@@ -893,7 +970,11 @@ class _AssessmentImageBox extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.camera_alt, size: 42, color: Colors.black54),
+                    const Icon(
+                      Icons.camera_alt,
+                      size: 42,
+                      color: Colors.black54,
+                    ),
                     const SizedBox(height: 8),
                     Text(label, style: const TextStyle(color: Colors.black54)),
                   ],
@@ -922,4 +1003,3 @@ class _AssessmentImageBox extends StatelessWidget {
     );
   }
 }
-

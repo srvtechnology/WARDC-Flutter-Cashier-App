@@ -9,6 +9,7 @@ import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
+import '../../utils/api_config.dart';
 
 class EditPropertyView extends StatefulWidget {
   const EditPropertyView({super.key, required this.property});
@@ -219,246 +220,244 @@ class _EditPropertyViewState extends State<EditPropertyView> {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Property')),
       body: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionCard(
-                      title: 'Category Type',
-                      children: [
-                        DropdownButtonFormField<String>(
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionCard(
+                title: 'Category Type',
+                children: [
+                  DropdownButtonFormField<String>(
+                    decoration: _decoration.copyWith(
+                      labelText: 'Category Type*',
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'R', child: Text('Residential')),
+                      DropdownMenuItem(value: 'C', child: Text('Commercial')),
+                    ],
+                    value: _categoryType,
+                    isExpanded: true,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateRequired(
+                      v,
+                      fieldName: 'Category Type',
+                    ),
+                    onChanged: (v) => setState(() => _categoryType = v),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Delivery',
+                children: [
+                  _ImageInputBox(
+                    label: 'Delivery Proof Image',
+                    path: _deliveredImagePath,
+                    existingImageUrl: widget.property['delivered_image']
+                        ?.toString(),
+                    onPick: _pickImage,
+                    onRemove: () => setState(() => _deliveredImagePath = null),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    decoration: _decoration.copyWith(
+                      labelText: 'Is Draft Delivered?',
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: '0', child: Text('No')),
+                      DropdownMenuItem(value: '1', child: Text('Yes')),
+                    ],
+                    value: _isDraftDelivered,
+                    onChanged: (v) => setState(() => _isDraftDelivered = v),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['delivered_name'],
                           decoration: _decoration.copyWith(
-                            labelText: 'Category Type*',
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'R',
-                              child: Text('Residential'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'C',
-                              child: Text('Commercial'),
-                            ),
-                          ],
-                          value: _categoryType,
-                          isExpanded: true,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Category Type'),
-                          onChanged: (v) => setState(() => _categoryType = v),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Delivery',
-                      children: [
-                        _ImageInputBox(
-                          label: 'Delivery Proof Image',
-                          path: _deliveredImagePath,
-                          existingImageUrl: widget.property['delivered_image']
-                              ?.toString(),
-                          onPick: _pickImage,
-                          onRemove: () =>
-                              setState(() => _deliveredImagePath = null),
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<String>(
-                          decoration: _decoration.copyWith(
-                            labelText: 'Is Draft Delivered?',
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: '0', child: Text('No')),
-                            DropdownMenuItem(value: '1', child: Text('Yes')),
-                          ],
-                          value: _isDraftDelivered,
-                          onChanged: (v) =>
-                              setState(() => _isDraftDelivered = v),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['delivered_name'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Recipient Name',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['delivered_number'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Recipient Number',
-                                ),
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [PhoneNumberFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    _SectionCard(
-                      title: 'Address',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['street_number'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Street Number',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['street_numbernew'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Street Number (New)',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _controllers['street_name'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Street Name',
+                            labelText: 'Recipient Name',
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['postcode'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Postcode',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(child: SizedBox.shrink()),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _SectionCard(
-                      title: 'Administrative',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildAdminSelect(
-                                'wards',
-                                'Ward',
-                                (v) => setState(() => _ward = v),
-                                _ward,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildAdminSelect(
-                                'constituencies',
-                                'Constituency',
-                                (v) => setState(() => _constituency = v),
-                                _constituency,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildAdminSelect(
-                                'sections',
-                                'Section',
-                                (v) => setState(() => _section = v),
-                                _section,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildAdminSelect(
-                                'chiefdoms',
-                                'Chiefdom',
-                                (v) => setState(() => _chiefdom = v),
-                                _chiefdom,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildAdminSelect(
-                                'districts',
-                                'District',
-                                (v) => setState(() => _district = v),
-                                _district,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildAdminSelect(
-                                'provinces',
-                                'Province',
-                                (v) => setState(() => _province = v),
-                                _province,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _SectionCard(
-                      title: 'Other',
-                      children: [_buildInaccessibleDropdown()],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Property'),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['delivered_number'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'Recipient Number',
+                          ),
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [PhoneNumberFormatter()],
+                          autovalidateMode: AutovalidateMode.onUserInteraction,
+                          validator: (v) => ValidationUtils.validatePhone(
+                            v,
+                            isRequired: false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              _SectionCard(
+                title: 'Address',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['street_number'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'Street Number',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['street_numbernew'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'Street Number (New)',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['street_name'],
+                    decoration: _decoration.copyWith(labelText: 'Street Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _controllers['postcode'],
+                          decoration: _decoration.copyWith(
+                            labelText: 'Postcode',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(child: SizedBox.shrink()),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _SectionCard(
+                title: 'Administrative',
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildAdminSelect(
+                          'wards',
+                          'Ward',
+                          (v) => setState(() => _ward = v),
+                          _ward,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildAdminSelect(
+                          'constituencies',
+                          'Constituency',
+                          (v) => setState(() => _constituency = v),
+                          _constituency,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildAdminSelect(
+                          'sections',
+                          'Section',
+                          (v) => setState(() => _section = v),
+                          _section,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildAdminSelect(
+                          'chiefdoms',
+                          'Chiefdom',
+                          (v) => setState(() => _chiefdom = v),
+                          _chiefdom,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildAdminSelect(
+                          'districts',
+                          'District',
+                          (v) => setState(() => _district = v),
+                          _district,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildAdminSelect(
+                          'provinces',
+                          'Province',
+                          (v) => setState(() => _province = v),
+                          _province,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _SectionCard(
+                title: 'Other',
+                children: [_buildInaccessibleDropdown()],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ],
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Update Property'),
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -506,7 +505,7 @@ class _EditPropertyViewState extends State<EditPropertyView> {
 
   Widget _buildInaccessibleDropdown() {
     final List<Map<String, dynamic>> rawOptions = _getInaccessibleOptions();
-    
+
     // Deduplicate options by ID to prevent Flutter assertion errors
     final Map<String, Map<String, dynamic>> uniqueOptionsMap = {};
     for (final Map<String, dynamic> o in rawOptions) {
@@ -516,17 +515,18 @@ class _EditPropertyViewState extends State<EditPropertyView> {
       }
     }
     final List<Map<String, dynamic>> options = uniqueOptionsMap.values.toList();
-    
+
     // Convert value to string for comparison
     final String? valueStr = _propertyInaccessible?.toString();
-    
+
     // Only set value if it exists in deduplicated options and options are not empty
-    final String? validValue = (valueStr != null && 
-                                valueStr.isNotEmpty && 
-                                uniqueOptionsMap.containsKey(valueStr))
+    final String? validValue =
+        (valueStr != null &&
+            valueStr.isNotEmpty &&
+            uniqueOptionsMap.containsKey(valueStr))
         ? valueStr
         : null;
-    
+
     return DropdownButtonFormField<String>(
       decoration: _decoration.copyWith(labelText: 'Property Inaccessible'),
       isExpanded: true,
@@ -691,7 +691,7 @@ class _ImageInputBox extends StatelessWidget {
               Image.file(File(path!), fit: BoxFit.cover)
             else if (hasExistingImage)
               Image.network(
-                'http://13.232.84.109/apis/storage/app/public/$existingImageUrl',
+                ApiConfig.getImageUrl(existingImageUrl),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Center(
