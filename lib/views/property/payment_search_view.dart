@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../services/property_service.dart';
+import 'property_details_view.dart';
 
 class PaymentSearchView extends StatefulWidget {
-  const PaymentSearchView({
-    super.key,
-    this.useScaffold = true,
-  });
+  const PaymentSearchView({super.key, this.useScaffold = true});
 
   final bool useScaffold;
 
@@ -18,14 +16,15 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
   final TextEditingController _searchController = TextEditingController();
   final PropertyService _propertyService = PropertyService();
   final FocusNode _searchFocusNode = FocusNode();
-  
+
   // Payment form controllers
   final TextEditingController _payingAmountController = TextEditingController();
   final TextEditingController _discountController = TextEditingController();
   final TextEditingController _chequeNoController = TextEditingController();
   final TextEditingController _payeeNameController = TextEditingController();
-  final TextEditingController _transactionIdController = TextEditingController();
-  
+  final TextEditingController _transactionIdController =
+      TextEditingController();
+
   bool _isLoading = false;
   String _errorMessage = '';
   dynamic _searchResult;
@@ -34,6 +33,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
   String _paymentType = 'Select';
   String? _selectedPartPaymentYear;
   bool _isSavingPayment = false;
+  bool _isLoadingDetails = false;
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
 
   Future<void> _performSearch() async {
     final searchQuery = _searchController.text.trim();
-    
+
     if (searchQuery.isEmpty) {
       Get.snackbar(
         'Error',
@@ -211,9 +211,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
         ),
 
         // Results Section
-        Expanded(
-          child: _buildResults(),
-        ),
+        Expanded(child: _buildResults()),
       ],
     );
 
@@ -264,10 +262,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
               const SizedBox(height: 8),
               Text(
                 _errorMessage,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -291,11 +286,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.payment_rounded,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
+            Icon(Icons.payment_rounded, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
             Text(
               'Search for Payment',
@@ -308,10 +299,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
             const SizedBox(height: 8),
             Text(
               'Enter a Property ID to search for payment information',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -340,10 +328,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
             const SizedBox(height: 8),
             Text(
               'No payment information found for Property ID: ${_searchController.text.trim()}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -357,16 +342,16 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
 
   Widget _buildPaymentInformation(dynamic result) {
     if (result == null || result is! Map) {
-      return const Center(
-        child: Text('Invalid response format'),
-      );
+      return const Center(child: Text('Invalid response format'));
     }
 
     final property = result['property'] as Map<String, dynamic>? ?? {};
     final allAssessments = result['allAssesments'] as List? ?? [];
     final propertyAssessment =
         result['propertyAssesment'] as Map<String, dynamic>? ??
-        (allAssessments.isNotEmpty ? allAssessments.first as Map<String, dynamic>? : null);
+        (allAssessments.isNotEmpty
+            ? allAssessments.first as Map<String, dynamic>?
+            : null);
     final amountPaid = (result['amountPaid'] as num?)?.toDouble() ?? 0.0;
 
     // Extract assessment data - check multiple possible locations
@@ -378,8 +363,9 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     }
 
     // Calculate values using payment-search response (match web Payment Form)
-    final assessedValue2025 =
-        _getNumericValue(propertyAssessment?['current_year_assessment_amount']);
+    final assessedValue2025 = _getNumericValue(
+      propertyAssessment?['current_year_assessment_amount'],
+    );
     final arrearDue = _getNumericValue(propertyAssessment?['arrear_calc']);
     final penalty = _getNumericValue(propertyAssessment?['newpenalty']);
     final amountPaid2025 = amountPaid;
@@ -387,7 +373,8 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     final balanceDue = dueAmount;
 
     // Property ID for header
-    final propertyIdForHeader = _getPropertyId(property, propertyAssessment) ?? '';
+    final propertyIdForHeader =
+        _getPropertyId(property, propertyAssessment) ?? '';
 
     // Get available years for part payment
     final availableYears = _getAvailableYears(allAssessments);
@@ -409,18 +396,43 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
           // Header & Property Details Card
           const Text(
             'Payment Information',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Property ID: $propertyIdForHeader',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Property ID: $propertyIdForHeader',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (propertyId != null)
+                TextButton.icon(
+                  onPressed: _isLoadingDetails
+                      ? null
+                      : () => _handleViewDetails(propertyId),
+                  icon: _isLoadingDetails
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.visibility, size: 18),
+                  label: Text(
+                    _isLoadingDetails ? 'Loading...' : 'View Details',
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 16),
           _PropertyDetailsCard(
@@ -432,7 +444,7 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
             balanceDue: balanceDue,
           ),
           const SizedBox(height: 16),
-          
+
           // Payment Input Card
           _PaymentInputCard(
             balanceDue: balanceDue,
@@ -460,11 +472,11 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
             isSaving: _isSavingPayment,
             onSave: assessmentId != null && propertyId != null
                 ? () => _handleSavePayment(
-                      propertyId: propertyId,
-                      assessmentId: assessmentId,
-                      paymentYear: paymentYear,
-                      balanceDue: balanceDue,
-                    )
+                    propertyId: propertyId,
+                    assessmentId: assessmentId,
+                    paymentYear: paymentYear,
+                    balanceDue: balanceDue,
+                  )
                 : null,
           ),
         ],
@@ -485,8 +497,9 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     final years = <String>[];
     for (final assessment in assessments) {
       if (assessment is Map) {
-        final year = assessment['year']?.toString() ?? 
-                    assessment['assessment_year']?.toString();
+        final year =
+            assessment['year']?.toString() ??
+            assessment['assessment_year']?.toString();
         if (year != null && year.isNotEmpty && !years.contains(year)) {
           years.add(year);
         }
@@ -529,15 +542,61 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
     return id?.toString();
   }
 
+  Future<void> _handleViewDetails(String propertyId) async {
+    setState(() {
+      _isLoadingDetails = true;
+    });
+
+    try {
+      final response = await _propertyService.getPropertyDetails(
+        propertyId: propertyId,
+      );
+
+      if (response['success'] == true && response['property'] != null) {
+        final propertyData = response['property'] as Map<String, dynamic>;
+
+        // Navigate to PropertyDetailsView
+        Get.to(
+          () => PropertyDetailsView(property: propertyData),
+          transition: Transition.rightToLeft,
+        );
+      } else {
+        Get.snackbar(
+          'Error',
+          'Failed to load property details',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        e.toString().replaceFirst('AuthException: ', ''),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingDetails = false;
+        });
+      }
+    }
+  }
+
   Future<void> _handleSavePayment({
     required String propertyId,
     required String assessmentId,
     required String paymentYear,
     required double balanceDue,
   }) async {
-    final payingAmount = double.tryParse(_payingAmountController.text.trim()) ?? 0.0;
-    final discountOffered = double.tryParse(_discountController.text.trim()) ?? 0.0;
-    
+    final payingAmount =
+        double.tryParse(_payingAmountController.text.trim()) ?? 0.0;
+    final discountOffered =
+        double.tryParse(_discountController.text.trim()) ?? 0.0;
+
     if (payingAmount <= 0) {
       Get.snackbar(
         'Error',
@@ -621,8 +680,10 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
       }
     }
 
-    final remainingDue =
-        (balanceDue - payingAmount - discountOffered).clamp(0.0, balanceDue);
+    final remainingDue = (balanceDue - payingAmount - discountOffered).clamp(
+      0.0,
+      balanceDue,
+    );
 
     final payload = <String, dynamic>{
       'assessment_id': int.tryParse(assessmentId) ?? assessmentId,
@@ -643,7 +704,8 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
         _isSavingPayment = true;
       });
       final response = await _propertyService.submitPayment(payload: payload);
-      final message = response['message']?.toString() ?? 'Payment saved successfully';
+      final message =
+          response['message']?.toString() ?? 'Payment saved successfully';
       Get.snackbar(
         'Success',
         message,
@@ -719,20 +781,11 @@ class _PropertyDetailsCard extends StatelessWidget {
             value: _formatCurrency(assessedValue2025),
           ),
           const SizedBox(height: 12),
-          _DetailRow(
-            label: 'Arrear',
-            value: _formatCurrency(arrearDue),
-          ),
+          _DetailRow(label: 'Arrear', value: _formatCurrency(arrearDue)),
           const SizedBox(height: 12),
-          _DetailRow(
-            label: 'Due',
-            value: _formatCurrency(dueAmount),
-          ),
+          _DetailRow(label: 'Due', value: _formatCurrency(dueAmount)),
           const SizedBox(height: 12),
-          _DetailRow(
-            label: 'Penalty',
-            value: _formatCurrency(penalty),
-          ),
+          _DetailRow(label: 'Penalty', value: _formatCurrency(penalty)),
           const SizedBox(height: 12),
           _DetailRow(
             label: 'Amount Paid (2025)',
@@ -919,10 +972,7 @@ class _PaymentInputCard extends StatelessWidget {
           const SizedBox(height: 6),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.grey.shade200,
               borderRadius: BorderRadius.circular(8),
@@ -937,7 +987,7 @@ class _PaymentInputCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          
+
           // Payment Type
           const Text(
             'Payment Type',
@@ -961,25 +1011,16 @@ class _PaymentInputCard extends StatelessWidget {
             ),
             hint: const Text('Select'),
             items: const [
-              DropdownMenuItem(
-                value: 'Cash',
-                child: Text('Cash'),
-              ),
-              DropdownMenuItem(
-                value: 'Cheque',
-                child: Text('Cheque'),
-              ),
-              DropdownMenuItem(
-                value: 'Online',
-                child: Text('Online'),
-              ),
+              DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+              DropdownMenuItem(value: 'Cheque', child: Text('Cheque')),
+              DropdownMenuItem(value: 'Online', child: Text('Online')),
             ],
             onChanged: (value) {
               if (value != null) onPaymentTypeChanged(value);
             },
           ),
           const SizedBox(height: 16),
-          
+
           // Adjust Paying Year
           const Text(
             'Adjust Paying Year',
@@ -1002,15 +1043,12 @@ class _PaymentInputCard extends StatelessWidget {
               ),
             ),
             items: availableYears.map((year) {
-              return DropdownMenuItem(
-                value: year,
-                child: Text(year),
-              );
+              return DropdownMenuItem(value: year, child: Text(year));
             }).toList(),
             onChanged: onPartPaymentYearChanged,
           ),
           const SizedBox(height: 16),
-          
+
           // Cheque No (only if Cheque is selected)
           if (paymentType == 'Cheque') ...[
             TextField(
@@ -1029,7 +1067,7 @@ class _PaymentInputCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          
+
           // Transaction Id (only if Online is selected)
           if (paymentType == 'Online') ...[
             TextField(
@@ -1067,7 +1105,7 @@ class _PaymentInputCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          
+
           // Save Button
           SizedBox(
             width: double.infinity,
@@ -1104,4 +1142,3 @@ class _PaymentInputCard extends StatelessWidget {
     );
   }
 }
-

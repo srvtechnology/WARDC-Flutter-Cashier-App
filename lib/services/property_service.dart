@@ -165,6 +165,36 @@ class PropertyService {
     }
   }
 
+  Future<Map<String, dynamic>> getPropertyDetails({
+    required String propertyId,
+  }) async {
+    final String? token = await AuthService().getToken();
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    try {
+      Get.log('Property details request: $propertyId');
+      final dio.Response<dynamic> res = await _dio.post(
+        '/property/details',
+        data: {'property_id': propertyId},
+        options: options,
+      );
+      final Map<String, dynamic> response = _cast(res.data);
+      Get.log('Property details response: $response');
+      return response;
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Property details failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
   Future<Map<String, dynamic>> savePropertyMultipart({
     required Map<String, dynamic> fields,
     Map<String, dynamic>?

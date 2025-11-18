@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:map_launcher/map_launcher.dart';
 import '../../services/property_service.dart';
-import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
@@ -191,7 +190,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   Map<String, dynamic> get _geo =>
       Map<String, dynamic>.from((prop['geo_registry'] ?? {}) as Map? ?? {});
   Map<String, dynamic> get _assessmentsObject {
-    final List<dynamic>? assessments = prop['assessments_object'] as List?;
+    // Try both 'assessments' and 'assessments_object' keys
+    final List<dynamic>? assessments =
+        (prop['assessments'] as List?) ?? (prop['assessments_object'] as List?);
     if (assessments != null && assessments.isNotEmpty) {
       return Map<String, dynamic>.from((assessments[0] as Map? ?? {}));
     }
@@ -216,11 +217,19 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     if (_loadingVars) return;
     setState(() => _loadingVars = true);
     try {
-      final Map<String, dynamic> data = await PropertyService()
-          .getAllVariables();
-      setState(() {
-        _variables = data;
-      });
+      // First check if the property data already includes the 'data' object
+      if (prop['data'] != null && prop['data'] is Map) {
+        setState(() {
+          _variables = Map<String, dynamic>.from(prop['data'] as Map);
+        });
+      } else {
+        // Otherwise fetch from API
+        final Map<String, dynamic> data = await PropertyService()
+            .getAllVariables();
+        setState(() {
+          _variables = data;
+        });
+      }
     } catch (_) {
       // ignore
     } finally {
@@ -231,6 +240,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   String _labelFor(String dataKey, dynamic id) {
     if (_variables == null || id == null) return _text(id);
     final dynamic list = _variables![dataKey];
+
+    // Handle List format
     if (list is List) {
       for (final dynamic e in list) {
         if (e is Map) {
@@ -242,6 +253,15 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         }
       }
     }
+
+    // Handle Map format (key-value pairs)
+    if (list is Map) {
+      final String idStr = id.toString();
+      if (list.containsKey(idStr)) {
+        return list[idStr]?.toString() ?? idStr;
+      }
+    }
+
     return id.toString();
   }
 
@@ -346,7 +366,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       }
 
       if (!launched) {
-        ToastService.showError('Could not open maps. Please ensure a map application is installed.');
+        ToastService.showError(
+          'Could not open maps. Please ensure a map application is installed.',
+        );
       }
     } catch (e) {
       ToastService.showError('Failed to open map: ${e.toString()}');
@@ -584,39 +606,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     return '—';
   }
 
-  void _handleEdit() {
-    final int step = _step.value;
-    switch (step) {
-      case 0:
-        Get.toNamed(Routes.editLandlord, arguments: prop);
-        break;
-      case 1:
-        Get.toNamed(Routes.editProperty, arguments: prop);
-        break;
-      case 2:
-        Get.toNamed(Routes.editOccupancy, arguments: prop);
-        break;
-      case 3:
-        Get.toNamed(Routes.editGeo, arguments: prop);
-        break;
-      case 4:
-        Get.toNamed(Routes.editAssessment, arguments: prop);
-        break;
-    }
-  }
-
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Property Details'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit, color: Colors.green),
-            onPressed: _handleEdit,
-            tooltip: 'Edit',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Property Details')),
       body: Obx(() {
         final int step = _step.value;
         return SafeArea(
@@ -716,9 +708,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          _SectionCard(
-            title: 'Type',
-            children: [
+            _SectionCard(
+              title: 'Type',
+              children: [
                 _KV(
                   'Is Organization',
                   _formValue('is_organization') == '1' ? 'Yes' : 'No',
@@ -768,9 +760,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          _SectionCard(
-            title: 'Category Type',
-            children: [
+            _SectionCard(
+              title: 'Category Type',
+              children: [
                 _KV(
                   'Category Type',
                   _formValue('categoryType') == 'R'
@@ -1324,10 +1316,7 @@ class _KV extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.children,
-  });
+  const _SectionCard({required this.title, required this.children});
   final String title;
   final List<Widget> children;
   @override
