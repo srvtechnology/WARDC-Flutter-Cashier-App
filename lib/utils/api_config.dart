@@ -5,7 +5,7 @@ class ApiConfig {
   ApiConfig._();
 
   /// Environment type
-  static Environment _environment = Environment.production;
+  static Environment _environment = Environment.development;
 
   /// Get current environment
   static Environment get environment => _environment;
@@ -16,8 +16,9 @@ class ApiConfig {
   }
 
   /// Base URLs for different environments
-  static const String _devBaseUrl = 'https://wardc-dev.srvtechnology.com/public/api/';
-  static const String _prodBaseUrl = 'https://wardc.srvtechnology.com/public/api/';
+  static const String _devBaseUrl =
+      'https://wardc.srvtechnology.com/public/api/';
+  static const String _prodBaseUrl = 'http://13.232.84.109/apis/api/';
 
   /// Get base URL based on current environment
   static String get baseUrl {
@@ -37,10 +38,4 @@ class ApiConfig {
 }
 
 /// Environment enumeration
-enum Environment {
-  development,
-  production,
-}
-
-
-
+enum Environment { development, production }
