@@ -3,11 +3,17 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:map_launcher/map_launcher.dart';
 import '../../services/property_service.dart';
+import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 
 class PropertyDetailsView extends StatefulWidget {
-  const PropertyDetailsView({super.key, required this.property});
+  const PropertyDetailsView({
+    super.key,
+    required this.property,
+    this.showEditButton = true,
+  });
   final Map<String, dynamic> property;
+  final bool showEditButton;
 
   @override
   State<PropertyDetailsView> createState() => _PropertyDetailsViewState();
@@ -606,9 +612,41 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     return '—';
   }
 
+  void _handleEdit() {
+    final int step = _step.value;
+    switch (step) {
+      case 0:
+        Get.toNamed(Routes.editLandlord, arguments: prop);
+        break;
+      case 1:
+        Get.toNamed(Routes.editProperty, arguments: prop);
+        break;
+      case 2:
+        Get.toNamed(Routes.editOccupancy, arguments: prop);
+        break;
+      case 3:
+        Get.toNamed(Routes.editGeo, arguments: prop);
+        break;
+      case 4:
+        Get.toNamed(Routes.editAssessment, arguments: prop);
+        break;
+    }
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Property Details')),
+      appBar: AppBar(
+        title: const Text('Property Details'),
+        actions: widget.showEditButton
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.green),
+                  onPressed: _handleEdit,
+                  tooltip: 'Edit',
+                ),
+              ]
+            : null,
+      ),
       body: Obx(() {
         final int step = _step.value;
         return SafeArea(

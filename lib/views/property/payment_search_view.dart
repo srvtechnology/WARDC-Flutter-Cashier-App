@@ -555,9 +555,12 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
       if (response['success'] == true && response['property'] != null) {
         final propertyData = response['property'] as Map<String, dynamic>;
 
-        // Navigate to PropertyDetailsView
+        // Navigate to PropertyDetailsView with edit disabled
         Get.to(
-          () => PropertyDetailsView(property: propertyData),
+          () => PropertyDetailsView(
+            property: propertyData,
+            showEditButton: false,
+          ),
           transition: Transition.rightToLeft,
         );
       } else {
