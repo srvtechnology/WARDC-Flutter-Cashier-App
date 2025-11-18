@@ -406,43 +406,89 @@ class PropertyService {
 
     final dio.FormData formData = dio.FormData();
 
-    // Add all fields (allow empty strings for some fields like digital_address)
+    // Add all top-level fields (property_id, property_geo_registry_id, digital_address, dor_lat_long, point1-8)
     fields.forEach((key, value) {
       if (value == null) return;
-      // Allow empty strings for digital_address, but skip null values
-      final String stringValue = value.toString();
-      formData.fields.add(MapEntry(key, stringValue));
+      formData.fields.add(MapEntry(key, value.toString()));
     });
 
-    // Handle meter data with proper structure
-    if (meterData != null) {
+    // Build meterData[n][field] structure exactly as per API requirement
+    if (meterData != null && meterData.isNotEmpty) {
       for (int i = 0; i < meterData.length; i++) {
         final Map<String, dynamic> meter = meterData[i];
-        
-        // Existing meter (has id)
-        if (meter.containsKey('id') && meter['id'] != null) {
-          formData.fields.add(MapEntry('meterData[$i][id]', meter['id'].toString()));
-          formData.fields.add(MapEntry('meterData[$i][property_id]', meter['property_id'].toString()));
-          formData.fields.add(MapEntry('meterData[$i][number]', meter['number']?.toString() ?? ''));
-          
-          // Include all metadata fields for existing meters
+
+        // Check if this is an existing meter (has id) or new meter (no id)
+        final bool isExisting = meter.containsKey('id') && meter['id'] != null;
+
+        if (isExisting) {
+          // Existing meter - include all metadata fields
+          formData.fields.add(
+            MapEntry('meterData[$i][id]', meter['id'].toString()),
+          );
+          formData.fields.add(
+            MapEntry(
+              'meterData[$i][property_id]',
+              meter['property_id'].toString(),
+            ),
+          );
+          formData.fields.add(
+            MapEntry(
+              'meterData[$i][number]',
+              meter['number']?.toString() ?? '',
+            ),
+          );
+
+          // Add timestamps
           if (meter.containsKey('created_at') && meter['created_at'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][created_at]', meter['created_at'].toString()));
+            formData.fields.add(
+              MapEntry(
+                'meterData[$i][created_at]',
+                meter['created_at'].toString(),
+              ),
+            );
           }
           if (meter.containsKey('updated_at') && meter['updated_at'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][updated_at]', meter['updated_at'].toString()));
+            formData.fields.add(
+              MapEntry(
+                'meterData[$i][updated_at]',
+                meter['updated_at'].toString(),
+              ),
+            );
           }
+
+          // Add image URLs
           if (meter.containsKey('original') && meter['original'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][original]', meter['original'].toString()));
+            formData.fields.add(
+              MapEntry('meterData[$i][original]', meter['original'].toString()),
+            );
           }
-          if (meter.containsKey('small_preview') && meter['small_preview'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][small_preview]', meter['small_preview'].toString()));
+          if (meter.containsKey('small_preview') &&
+              meter['small_preview'] != null) {
+            formData.fields.add(
+              MapEntry(
+                'meterData[$i][small_preview]',
+                meter['small_preview'].toString(),
+              ),
+            );
           }
-          if (meter.containsKey('large_preview') && meter['large_preview'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][large_preview]', meter['large_preview'].toString()));
+          if (meter.containsKey('large_preview') &&
+              meter['large_preview'] != null) {
+            formData.fields.add(
+              MapEntry(
+                'meterData[$i][large_preview]',
+                meter['large_preview'].toString(),
+              ),
+            );
           }
-          
-          // If new image file is selected, upload it
+
+          // Add existing image path
+          if (meter.containsKey('image') && meter['image'] != null) {
+            formData.fields.add(
+              MapEntry('meterData[$i][image]', meter['image'].toString()),
+            );
+          }
+
+          // If user selected a new image file, add it as MultipartFile
           if (meter.containsKey('imageFile') && meter['imageFile'] != null) {
             final String imagePath = meter['imageFile'].toString();
             if (imagePath.isNotEmpty && File(imagePath).existsSync()) {
@@ -456,17 +502,17 @@ class PropertyService {
                 ),
               );
             }
-          }
-          
-          // Always include existing image path if available (even if updating with new file)
-          if (meter.containsKey('image') && meter['image'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][image]', meter['image'].toString()));
           }
         } else {
-          // New meter (no id)
-          formData.fields.add(MapEntry('meterData[$i][number]', meter['number']?.toString() ?? ''));
-          
-          // Upload new image file
+          // New meter - meterData[n][number], meterData[n][imageFile], meterData[n][imageUrl], meterData[n][small_preview]
+          formData.fields.add(
+            MapEntry(
+              'meterData[$i][number]',
+              meter['number']?.toString() ?? '',
+            ),
+          );
+
+          // Add new image file as MultipartFile
           if (meter.containsKey('imageFile') && meter['imageFile'] != null) {
             final String imagePath = meter['imageFile'].toString();
             if (imagePath.isNotEmpty && File(imagePath).existsSync()) {
@@ -481,15 +527,21 @@ class PropertyService {
               );
             }
           }
-          
-          // Include imageUrl if available (for blob URLs)
+
+          // Add blob URL if available (for web/preview)
           if (meter.containsKey('imageUrl') && meter['imageUrl'] != null) {
-            formData.fields.add(MapEntry('meterData[$i][imageUrl]', meter['imageUrl'].toString()));
+            formData.fields.add(
+              MapEntry('meterData[$i][imageUrl]', meter['imageUrl'].toString()),
+            );
           }
-          
-          // Include small_preview (can be empty for new meters)
-          final String smallPreview = meter['small_preview']?.toString() ?? '';
-          formData.fields.add(MapEntry('meterData[$i][small_preview]', smallPreview));
+
+          // Add small_preview (empty string for new meters)
+          formData.fields.add(
+            MapEntry(
+              'meterData[$i][small_preview]',
+              meter['small_preview']?.toString() ?? '',
+            ),
+          );
         }
       }
     }
@@ -503,25 +555,34 @@ class PropertyService {
     );
 
     try {
-      // Log form data for debugging
-      Get.log('Geo update FormData fields: ${formData.fields.length}');
-      Get.log('Geo update FormData files: ${formData.files.length}');
-      
+      // Debug logging
+      Get.log('=== Geo Location Update FormData ===');
+      Get.log('Fields count: ${formData.fields.length}');
+      Get.log('Files count: ${formData.files.length}');
+      for (final field in formData.fields) {
+        Get.log('  ${field.key}: ${field.value}');
+      }
+      for (final file in formData.files) {
+        Get.log('  ${file.key}: [MultipartFile]');
+      }
+
       final dio.Response<dynamic> res = await _updateDio.post(
         '/geolocation/update',
         data: formData,
         options: options,
       );
-      
-      Get.log('Geo update API response status: ${res.statusCode}');
-      Get.log('Geo update API response data: ${res.data}');
-      
+
+      Get.log('Geo update response status: ${res.statusCode}');
+      Get.log('Geo update response data: ${res.data}');
+
       return _cast(res.data);
     } on dio.DioException catch (e) {
       final String msg = _mapDioError(e);
       Get.log('Geo location update failed: $msg');
-      Get.log('Geo location update error response: ${e.response?.data}');
-      Get.log('Geo location update error status: ${e.response?.statusCode}');
+      if (e.response != null) {
+        Get.log('Error response data: ${e.response?.data}');
+        Get.log('Error status code: ${e.response?.statusCode}');
+      }
       throw AuthException(msg);
     }
   }
