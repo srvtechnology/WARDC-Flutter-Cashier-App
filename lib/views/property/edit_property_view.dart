@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
@@ -229,22 +230,35 @@ class _EditPropertyViewState extends State<EditPropertyView> {
               _SectionCard(
                 title: 'Category Type',
                 children: [
-                  DropdownButtonFormField<String>(
-                    decoration: _decoration.copyWith(
-                      labelText: 'Category Type*',
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'R', child: Text('Residential')),
-                      DropdownMenuItem(value: 'C', child: Text('Commercial')),
+                  DropdownSearch<String>(
+                    items: (filter, infiniteScrollProps) => const [
+                      'Residential',
+                      'Commercial',
                     ],
-                    value: _categoryType,
-                    isExpanded: true,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    decoratorProps: DropDownDecoratorProps(
+                      decoration: _decoration.copyWith(
+                        labelText: 'Category Type*',
+                      ),
+                    ),
+                    popupProps: const PopupProps.menu(
+                      showSearchBox: true,
+                      searchFieldProps: TextFieldProps(
+                        decoration: InputDecoration(
+                          hintText: 'Search category...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    selectedItem: _categoryType == 'R'
+                        ? 'Residential'
+                        : (_categoryType == 'C' ? 'Commercial' : null),
                     validator: (v) => ValidationUtils.validateRequired(
                       v,
                       fieldName: 'Category Type',
                     ),
-                    onChanged: (v) => setState(() => _categoryType = v),
+                    onChanged: (v) => setState(
+                      () => _categoryType = v == 'Residential' ? 'R' : 'C',
+                    ),
                   ),
                 ],
               ),
@@ -261,45 +275,47 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                     onRemove: () => setState(() => _deliveredImagePath = null),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    decoration: _decoration.copyWith(
-                      labelText: 'Is Draft Delivered?',
+                  DropdownSearch<String>(
+                    items: (filter, infiniteScrollProps) => const ['No', 'Yes'],
+                    decoratorProps: DropDownDecoratorProps(
+                      decoration: _decoration.copyWith(
+                        labelText: 'Is Draft Delivered?',
+                      ),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: '0', child: Text('No')),
-                      DropdownMenuItem(value: '1', child: Text('Yes')),
-                    ],
-                    value: _isDraftDelivered,
-                    onChanged: (v) => setState(() => _isDraftDelivered = v),
+                    popupProps: const PopupProps.menu(
+                      showSearchBox: true,
+                      searchFieldProps: TextFieldProps(
+                        decoration: InputDecoration(
+                          hintText: 'Search...',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    selectedItem: _isDraftDelivered == '0'
+                        ? 'No'
+                        : (_isDraftDelivered == '1' ? 'Yes' : null),
+                    onChanged: (v) => setState(
+                      () => _isDraftDelivered = v == 'Yes' ? '1' : '0',
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['delivered_name'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Recipient Name',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['delivered_number'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Recipient Number',
-                          ),
-                          keyboardType: TextInputType.phone,
-                          inputFormatters: [PhoneNumberFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validatePhone(
-                            v,
-                            isRequired: false,
-                          ),
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    controller: _controllers['delivered_name'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Recipient Name',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['delivered_number'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Recipient Number',
+                    ),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: false),
                   ),
                 ],
               ),
@@ -308,26 +324,18 @@ class _EditPropertyViewState extends State<EditPropertyView> {
               _SectionCard(
                 title: 'Address',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['street_number'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Street Number',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['street_numbernew'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Street Number (New)',
-                          ),
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    controller: _controllers['street_number'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Street Number',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['street_numbernew'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Street Number (New)',
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -335,19 +343,9 @@ class _EditPropertyViewState extends State<EditPropertyView> {
                     decoration: _decoration.copyWith(labelText: 'Street Name'),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['postcode'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Postcode',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(child: SizedBox.shrink()),
-                    ],
+                  TextFormField(
+                    controller: _controllers['postcode'],
+                    decoration: _decoration.copyWith(labelText: 'Postcode'),
                   ),
                 ],
               ),
@@ -355,70 +353,46 @@ class _EditPropertyViewState extends State<EditPropertyView> {
               _SectionCard(
                 title: 'Administrative',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildAdminSelect(
-                          'wards',
-                          'Ward',
-                          (v) => setState(() => _ward = v),
-                          _ward,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildAdminSelect(
-                          'constituencies',
-                          'Constituency',
-                          (v) => setState(() => _constituency = v),
-                          _constituency,
-                        ),
-                      ),
-                    ],
+                  _buildAdminSelect(
+                    'wards',
+                    'Ward',
+                    (v) => setState(() => _ward = v),
+                    _ward,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildAdminSelect(
-                          'sections',
-                          'Section',
-                          (v) => setState(() => _section = v),
-                          _section,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildAdminSelect(
-                          'chiefdoms',
-                          'Chiefdom',
-                          (v) => setState(() => _chiefdom = v),
-                          _chiefdom,
-                        ),
-                      ),
-                    ],
+                  _buildAdminSelect(
+                    'constituencies',
+                    'Constituency',
+                    (v) => setState(() => _constituency = v),
+                    _constituency,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildAdminSelect(
-                          'districts',
-                          'District',
-                          (v) => setState(() => _district = v),
-                          _district,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildAdminSelect(
-                          'provinces',
-                          'Province',
-                          (v) => setState(() => _province = v),
-                          _province,
-                        ),
-                      ),
-                    ],
+                  _buildAdminSelect(
+                    'sections',
+                    'Section',
+                    (v) => setState(() => _section = v),
+                    _section,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'chiefdoms',
+                    'Chiefdom',
+                    (v) => setState(() => _chiefdom = v),
+                    _chiefdom,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'districts',
+                    'District',
+                    (v) => setState(() => _district = v),
+                    _district,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'provinces',
+                    'Province',
+                    (v) => setState(() => _province = v),
+                    _province,
                   ),
                 ],
               ),
@@ -468,37 +442,44 @@ class _EditPropertyViewState extends State<EditPropertyView> {
     String? value,
   ) {
     final List<Map<String, dynamic>> options = _getAdminOptions(dataKey);
-    return DropdownButtonFormField<String>(
-      decoration: _decoration.copyWith(labelText: label),
-      value: options.isEmpty ? null : value,
-      isExpanded: true,
-      hint: options.isEmpty
-          ? const Text('Loading...', style: TextStyle(color: Colors.grey))
-          : null,
-      selectedItemBuilder: options.isEmpty
-          ? null
-          : (context) => [
-              for (final Map<String, dynamic> o in options)
-                Text(
-                  o['label']?.toString() ?? 'Item',
-                  overflow: TextOverflow.ellipsis,
-                ),
-            ],
-      items: options.isEmpty
-          ? [
-              const DropdownMenuItem<String>(
-                value: null,
-                enabled: false,
-                child: Text('Loading options...'),
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        if (options.isEmpty) return [];
+        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(
+          labelText: label,
+          hintText: options.isEmpty ? 'Loading...' : null,
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = options.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-            ]
-          : [
-              for (final Map<String, dynamic> o in options)
-                DropdownMenuItem<String>(
-                  value: (o['id'] ?? o['value']).toString(),
-                  child: Text(o['label']?.toString() ?? 'Item'),
-                ),
-            ],
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      enabled: options.isNotEmpty,
+      selectedItem: options.isEmpty ? null : value,
+      compareFn: (item1, item2) => item1 == item2,
       onChanged: options.isEmpty ? null : onChanged,
     );
   }
@@ -527,28 +508,44 @@ class _EditPropertyViewState extends State<EditPropertyView> {
         ? valueStr
         : null;
 
-    return DropdownButtonFormField<String>(
-      decoration: _decoration.copyWith(labelText: 'Property Inaccessible'),
-      isExpanded: true,
-      value: options.isEmpty ? null : validValue,
-      hint: options.isEmpty
-          ? const Text('Loading...', style: TextStyle(color: Colors.grey))
-          : null,
-      items: options.isEmpty
-          ? [
-              const DropdownMenuItem<String>(
-                value: null,
-                enabled: false,
-                child: Text('Loading options...'),
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        if (options.isEmpty) return [];
+        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(
+          labelText: 'Property Inaccessible',
+          hintText: options.isEmpty ? 'Loading...' : null,
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = options.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-            ]
-          : [
-              for (final Map<String, dynamic> o in options)
-                DropdownMenuItem<String>(
-                  value: (o['id'] ?? o['value']).toString(),
-                  child: Text(o['label']?.toString() ?? 'Item'),
-                ),
-            ],
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      enabled: options.isNotEmpty,
+      selectedItem: options.isEmpty ? null : validValue,
+      compareFn: (item1, item2) => item1 == item2,
       onChanged: options.isEmpty
           ? null
           : (v) => setState(() => _propertyInaccessible = v),

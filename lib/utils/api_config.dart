@@ -24,7 +24,7 @@ class ApiConfig {
 
   /// Storage URLs for different environments
   static const String _devStorageUrl =
-      'http://13.232.84.109/apis/storage/app/public/';
+      'https://wardc.srvtechnology.com/storage/app/public/';
   static const String _prodStorageUrl =
       'http://13.232.84.109/apis/storage/app/public/';
 

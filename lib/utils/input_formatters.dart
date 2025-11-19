@@ -2,7 +2,7 @@
 
 import 'package:flutter/services.dart';
 
-/// Formatter for phone numbers (Sierra Leone format)
+/// Formatter for phone numbers (allows international format with country codes)
 class PhoneNumberFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -10,57 +10,23 @@ class PhoneNumberFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final text = newValue.text;
-    
-    // Allow backspace
+
+    // Allow backspace/deletion
     if (text.length < oldValue.text.length) {
       return newValue;
     }
 
-    // Remove all non-digit characters except +
-    final digitsOnly = text.replaceAll(RegExp(r'[^\d+]'), '');
-    
-    // If starts with +, allow +232 format
-    if (digitsOnly.startsWith('+')) {
-      if (digitsOnly.length > 13) {
-        return oldValue; // Max length for +232XXXXXXXXX
-      }
-      // Ensure it starts with +232
-      if (digitsOnly.length > 1 && !digitsOnly.startsWith('+232')) {
-        if (digitsOnly.startsWith('+2')) {
-          return oldValue; // Wait for more digits
-        }
-        // If it's just +, allow it
-        if (digitsOnly == '+') {
-          return TextEditingValue(
-            text: digitsOnly,
-            selection: TextSelection.collapsed(offset: digitsOnly.length),
-          );
-        }
-        // If it doesn't start with +232, format as 0XXXXXXXXX
-        final digits = digitsOnly.replaceAll('+', '');
-        if (digits.isEmpty) return oldValue;
-        if (digits.length > 10) return oldValue;
-        return TextEditingValue(
-          text: digits.startsWith('0') ? digits : '0$digits',
-          selection: TextSelection.collapsed(offset: digits.startsWith('0') ? digits.length : digits.length + 1),
-        );
-      }
-      return TextEditingValue(
-        text: digitsOnly,
-        selection: TextSelection.collapsed(offset: digitsOnly.length),
-      );
-    }
+    // Remove all non-digit characters except + and spaces
+    final cleaned = text.replaceAll(RegExp(r'[^\d+\s]'), '');
 
-    // Format as 0XXXXXXXXX (max 10 digits)
-    if (digitsOnly.length > 10) {
+    // Max length: +XXX XXXXXXXXXX (15 digits + country code)
+    if (cleaned.replaceAll(RegExp(r'[\s+]'), '').length > 15) {
       return oldValue;
     }
-    
-    final formatted = digitsOnly.isEmpty ? '' : (digitsOnly.startsWith('0') ? digitsOnly : '0$digitsOnly');
-    
+
     return TextEditingValue(
-      text: formatted,
-      selection: TextSelection.collapsed(offset: formatted.length),
+      text: cleaned,
+      selection: TextSelection.collapsed(offset: cleaned.length),
     );
   }
 }
@@ -77,7 +43,7 @@ class DecimalInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final text = newValue.text;
-    
+
     // Allow empty
     if (text.isEmpty) {
       return newValue;
@@ -114,7 +80,7 @@ class IntegerInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final text = newValue.text;
-    
+
     // Allow empty
     if (text.isEmpty) {
       return newValue;
@@ -142,7 +108,7 @@ class CoordinateFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final text = newValue.text;
-    
+
     // Allow empty
     if (text.isEmpty) {
       return newValue;
@@ -168,4 +134,3 @@ class CoordinateFormatter extends TextInputFormatter {
     return newValue;
   }
 }
-

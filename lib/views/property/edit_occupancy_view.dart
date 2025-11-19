@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
@@ -34,10 +35,11 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
     'Rented House',
   ];
 
-  Map<String, dynamic> get _occupancy =>
-      Map<String, dynamic>.from(
-          (widget.property['occupancy'] ?? {}) as Map? ?? {});
-  List<dynamic> get _occupancies => (widget.property['occupancies'] as List?) ?? const [];
+  Map<String, dynamic> get _occupancy => Map<String, dynamic>.from(
+    (widget.property['occupancy'] ?? {}) as Map? ?? {},
+  );
+  List<dynamic> get _occupancies =>
+      (widget.property['occupancies'] as List?) ?? const [];
 
   @override
   void initState() {
@@ -54,19 +56,25 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
       }
     }
 
-    _tenantTitleId = _occupancy['ownerTenantTitle_id']?.toString() ??
+    _tenantTitleId =
+        _occupancy['ownerTenantTitle_id']?.toString() ??
         _occupancy['ownerTenantTitle']?.toString();
 
-    _controllers['tenant_first_name'] =
-        TextEditingController(text: _occupancy['tenant_first_name']?.toString() ?? '');
-    _controllers['middle_name'] =
-        TextEditingController(text: _occupancy['middle_name']?.toString() ?? '');
-    _controllers['surname'] =
-        TextEditingController(text: _occupancy['surname']?.toString() ?? '');
-    _controllers['mobile_1'] =
-        TextEditingController(text: _occupancy['mobile_1']?.toString() ?? '');
-    _controllers['mobile_2'] =
-        TextEditingController(text: _occupancy['mobile_2']?.toString() ?? '');
+    _controllers['tenant_first_name'] = TextEditingController(
+      text: _occupancy['tenant_first_name']?.toString() ?? '',
+    );
+    _controllers['middle_name'] = TextEditingController(
+      text: _occupancy['middle_name']?.toString() ?? '',
+    );
+    _controllers['surname'] = TextEditingController(
+      text: _occupancy['surname']?.toString() ?? '',
+    );
+    _controllers['mobile_1'] = TextEditingController(
+      text: _occupancy['mobile_1']?.toString() ?? '',
+    );
+    _controllers['mobile_2'] = TextEditingController(
+      text: _occupancy['mobile_2']?.toString() ?? '',
+    );
   }
 
   @override
@@ -115,7 +123,7 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
       await _propertyService.updateOccupancy(payload: payload);
 
       ToastService.showSuccess('Occupancy information updated successfully');
-      
+
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
       ToastService.showError('Failed to update occupancy: $e');
@@ -131,168 +139,183 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Occupancy')),
       body: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionCard(
-                      title: 'Select Occupancy Types',
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          children: [
-                            for (final String t in _types)
-                              FilterChip(
-                                selected: _selectedTypes.contains(t),
-                                label: Text(t),
-                                onSelected: (bool val) {
-                                  setState(() {
-                                    if (val) {
-                                      _selectedTypes.add(t);
-                                    } else {
-                                      _selectedTypes.remove(t);
-                                    }
-                                  });
-                                },
-                              ),
-                          ],
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionCard(
+                title: 'Select Occupancy Types',
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final String t in _types)
+                        FilterChip(
+                          selected: _selectedTypes.contains(t),
+                          label: Text(t),
+                          onSelected: (bool val) {
+                            setState(() {
+                              if (val) {
+                                _selectedTypes.add(t);
+                              } else {
+                                _selectedTypes.remove(t);
+                              }
+                            });
+                          },
                         ),
-                      ],
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Tenant Information',
+                children: [
+                  _buildTitleSelect(),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['tenant_first_name'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Tenant First Name',
                     ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Tenant Information',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildTitleSelect(),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['tenant_first_name'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Tenant First Name',
-                                ),
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Tenant First Name'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['middle_name'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Middle Name',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['surname'],
-                                decoration: _decoration.copyWith(labelText: 'Surname'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateRequired(
+                      v,
+                      fieldName: 'Tenant First Name',
                     ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Contact',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['mobile_1'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Mobile Number 1',
-                                ),
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [PhoneNumberFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['mobile_2'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Mobile Number 2',
-                                ),
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [PhoneNumberFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['middle_name'],
+                    decoration: _decoration.copyWith(labelText: 'Middle Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['surname'],
+                    decoration: _decoration.copyWith(labelText: 'Surname'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Contact',
+                children: [
+                  TextFormField(
+                    controller: _controllers['mobile_1'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Mobile Number 1',
                     ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: false),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['mobile_2'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Mobile Number 2',
+                    ),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Occupancy'),
-                      ),
-                    ),
-                  ],
+                        )
+                      : const Text('Update Occupancy'),
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildTitleSelect() {
     final List<Map<String, dynamic>> options = _getTitleOptions();
-    return DropdownButtonFormField<String>(
-      decoration: _decoration.copyWith(labelText: 'Title'),
-      value: _tenantTitleId,
-      isExpanded: true,
-      items: options
-          .map((o) => DropdownMenuItem<String>(
-                value: (o['id'] ?? o['value']).toString(),
-                child: Text(o['label']?.toString() ?? 'Item'),
-              ))
-          .toList(),
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(
+          labelText: 'Title',
+          hintText: 'Select Title',
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = options.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      selectedItem: _tenantTitleId,
+      compareFn: (item1, item2) => item1 == item2,
       onChanged: (v) => setState(() => _tenantTitleId = v),
     );
   }
 
   List<Map<String, dynamic>> _getTitleOptions() {
-    if (_variables == null) return const [{'id': '1', 'label': 'Mr.'}, {'id': '2', 'label': 'Ms.'}];
+    if (_variables == null)
+      return const [
+        {'id': '1', 'label': 'Mr.'},
+        {'id': '2', 'label': 'Ms.'},
+      ];
     final data = _variables!['data'] as Map<String, dynamic>?;
-    if (data == null) return const [{'id': '1', 'label': 'Mr.'}, {'id': '2', 'label': 'Ms.'}];
-    
+    if (data == null)
+      return const [
+        {'id': '1', 'label': 'Mr.'},
+        {'id': '2', 'label': 'Ms.'},
+      ];
+
     final allTitles = data['all_titles'] as List?;
     if (allTitles != null && allTitles.isNotEmpty) {
       return allTitles
@@ -301,20 +324,23 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
           .where((e) => e['is_active'] == null || e['is_active'] == 1)
           .toList();
     }
-    return const [{'id': '1', 'label': 'Mr.'}, {'id': '2', 'label': 'Ms.'}];
+    return const [
+      {'id': '1', 'label': 'Mr.'},
+      {'id': '2', 'label': 'Ms.'},
+    ];
   }
 
   InputDecoration get _decoration => const InputDecoration(
-        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green, width: 2),
-        ),
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      );
+    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green, width: 2),
+    ),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  );
 }
 
 class _SectionCard extends StatelessWidget {
@@ -351,4 +377,3 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
-

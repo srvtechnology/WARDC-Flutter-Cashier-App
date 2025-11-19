@@ -483,8 +483,14 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       case 'occupancy_mobile_2':
         return _text(_occupancy['mobile_2']);
       case 'tenant_ownerTitle_id':
+        // Try multiple possible keys for tenant title (ID or label)
         final dynamic tId =
-            _occupancy['ownerTenantTitle_id'] ?? _occupancy['ownerTenantTitle'];
+            _occupancy['ownerTenantTitle_id'] ??
+            _occupancy['ownerTenantTitle'] ??
+            _occupancy['tenant_title'] ??
+            _occupancy['tenantTitle'] ??
+            _occupancy['title'];
+        if (tId == null) return _text(tId);
         final String lbl = _labelFor('all_titles', tId);
         return (lbl.isEmpty || lbl == 'null') ? _text(tId) : lbl;
 
@@ -1181,8 +1187,26 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           if (categories == null || categories.isEmpty) return '—';
           final labels = categories
               .whereType<Map>()
-              .map((e) => e['label']?.toString())
-              .where((e) => e != null && e.isNotEmpty)
+              .map((e) {
+                final Map<String, dynamic> m = Map<String, dynamic>.from(e);
+                final dynamic raw =
+                    m['label'] ??
+                    m['name'] ??
+                    m['title'] ??
+                    m['category'] ??
+                    m['value'];
+                if (raw is String && raw.trim().isNotEmpty) {
+                  return raw.trim();
+                }
+                // Fallback: first non-empty string value in the map
+                for (final dynamic v in m.values) {
+                  if (v is String && v.trim().isNotEmpty) {
+                    return v.trim();
+                  }
+                }
+                return '';
+              })
+              .where((e) => e.isNotEmpty)
               .toList();
           return labels.isEmpty ? '—' : labels.join(', ');
         }
@@ -1192,8 +1216,25 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           if (types == null || types.isEmpty) return '—';
           final labels = types
               .whereType<Map>()
-              .map((e) => e['label']?.toString())
-              .where((e) => e != null && e.isNotEmpty)
+              .map((e) {
+                final Map<String, dynamic> m = Map<String, dynamic>.from(e);
+                final dynamic raw =
+                    m['label'] ??
+                    m['name'] ??
+                    m['title'] ??
+                    m['type'] ??
+                    m['value'];
+                if (raw is String && raw.trim().isNotEmpty) {
+                  return raw.trim();
+                }
+                for (final dynamic v in m.values) {
+                  if (v is String && v.trim().isNotEmpty) {
+                    return v.trim();
+                  }
+                }
+                return '';
+              })
+              .where((e) => e.isNotEmpty)
               .toList();
           return labels.isEmpty ? '—' : labels.join(', ');
         }
@@ -1204,8 +1245,25 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           if (valuesAdded == null || valuesAdded.isEmpty) return '—';
           final labels = valuesAdded
               .whereType<Map>()
-              .map((e) => e['label']?.toString())
-              .where((e) => e != null && e.isNotEmpty)
+              .map((e) {
+                final Map<String, dynamic> m = Map<String, dynamic>.from(e);
+                final dynamic raw =
+                    m['label'] ??
+                    m['name'] ??
+                    m['title'] ??
+                    m['value_added'] ??
+                    m['value'];
+                if (raw is String && raw.trim().isNotEmpty) {
+                  return raw.trim();
+                }
+                for (final dynamic v in m.values) {
+                  if (v is String && v.trim().isNotEmpty) {
+                    return v.trim();
+                  }
+                }
+                return '';
+              })
+              .where((e) => e.isNotEmpty)
               .toList();
           return labels.isEmpty ? '—' : labels.join(', ');
         }

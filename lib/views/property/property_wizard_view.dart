@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../controllers/property_controller.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/input_formatters.dart';
@@ -95,14 +96,18 @@ class PropertyWizardView extends GetView<PropertyController> {
                     return ElevatedButton.icon(
                       onPressed: isSubmitting
                           ? null
-                          : (isLastStep ? controller.submit : controller.nextStep),
+                          : (isLastStep
+                                ? controller.submit
+                                : controller.nextStep),
                       icon: isSubmitting
                           ? const SizedBox(
                               height: 18,
                               width: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Icon(
@@ -366,30 +371,24 @@ class _StepForms extends StatelessWidget {
                 _SectionCard(
                   title: 'Personal Information',
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _TitleSelect(
-                            controller: controller,
-                            payloadKey: 'landlord_ownerTitle_id',
-                            label: 'Title',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _val('landlord_first_name'),
-                            decoration: _decoration.copyWith(
-                              labelText: 'First Name*',
-                            ),
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'First Name'),
-                            onChanged: (v) =>
-                                controller.setField('landlord_first_name', v),
-                          ),
-                        ),
-                      ],
+                    _TitleSelect(
+                      controller: controller,
+                      payloadKey: 'landlord_ownerTitle_id',
+                      label: 'Title',
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: _val('landlord_first_name'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'First Name*',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'First Name',
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('landlord_first_name', v),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -405,48 +404,56 @@ class _StepForms extends StatelessWidget {
                       initialValue: _val('landlord_surname'),
                       decoration: _decoration.copyWith(labelText: 'Surname*'),
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Surname'),
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Surname',
+                      ),
                       onChanged: (v) =>
                           controller.setField('landlord_surname', v),
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      decoration: _decoration.copyWith(labelText: 'Gender'),
-                      items: const [
-                        DropdownMenuItem(value: 'm', child: Text('Male')),
-                        DropdownMenuItem(value: 'f', child: Text('Female')),
+                    DropdownSearch<String>(
+                      items: (filter, infiniteScrollProps) => const [
+                        'Male',
+                        'Female',
                       ],
-                      isExpanded: true,
-                      value: _val('landlord_sex'),
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Gender'),
-                      onChanged: (v) => controller.setField('landlord_sex', v),
+                      decoratorProps: DropDownDecoratorProps(
+                        decoration: _decoration.copyWith(labelText: 'Gender'),
+                      ),
+                      popupProps: const PopupProps.menu(
+                        showSearchBox: true,
+                        searchFieldProps: TextFieldProps(
+                          decoration: InputDecoration(
+                            hintText: 'Search gender...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      selectedItem: _val('landlord_sex') == 'm'
+                          ? 'Male'
+                          : (_val('landlord_sex') == 'f' ? 'Female' : null),
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Gender',
+                      ),
+                      onChanged: (v) => controller.setField(
+                        'landlord_sex',
+                        v == 'Male' ? 'm' : 'f',
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _val('landlord_id_type'),
-                            decoration: _decoration.copyWith(
-                              labelText: 'Id type',
-                            ),
-                            onChanged: (v) =>
-                                controller.setField('landlord_id_type', v),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _val('landlord_id_number'),
-                            decoration: _decoration.copyWith(
-                              labelText: 'Id number',
-                            ),
-                            onChanged: (v) =>
-                                controller.setField('landlord_id_number', v),
-                          ),
-                        ),
-                      ],
+                    TextFormField(
+                      initialValue: _val('landlord_id_type'),
+                      decoration: _decoration.copyWith(labelText: 'Id type'),
+                      onChanged: (v) =>
+                          controller.setField('landlord_id_type', v),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: _val('landlord_id_number'),
+                      decoration: _decoration.copyWith(labelText: 'Id number'),
+                      onChanged: (v) =>
+                          controller.setField('landlord_id_number', v),
                     ),
                   ],
                 ),
@@ -454,36 +461,32 @@ class _StepForms extends StatelessWidget {
                 _SectionCard(
                   title: 'Organization Information',
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _val('organization_name'),
-                            decoration: _decoration.copyWith(
-                              labelText: 'Organization Name',
-                            ),
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Name'),
-                            onChanged: (v) =>
-                                controller.setField('organization_name', v),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            initialValue: _val('organization_addresss'),
-                            decoration: _decoration.copyWith(
-                              labelText: 'Organization Address',
-                            ),
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Address'),
-                            onChanged: (v) =>
-                                controller.setField('organization_addresss', v),
-                          ),
-                        ),
-                      ],
+                    TextFormField(
+                      initialValue: _val('organization_name'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'Organization Name',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Organization Name',
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('organization_name', v),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      initialValue: _val('organization_addresss'),
+                      decoration: _decoration.copyWith(
+                        labelText: 'Organization Address',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Organization Address',
+                      ),
+                      onChanged: (v) =>
+                          controller.setField('organization_addresss', v),
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -492,7 +495,10 @@ class _StepForms extends StatelessWidget {
                         labelText: 'Organization Type',
                       ),
                       autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Type'),
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Organization Type',
+                      ),
                       onChanged: (v) =>
                           controller.setField('organization_type', v),
                     ),
@@ -514,38 +520,28 @@ class _StepForms extends StatelessWidget {
                     onChanged: (v) => controller.setField('landlord_email', v),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: _val('landlord_mobile_1'),
-                          decoration: _decoration.copyWith(
-                            labelText: 'Mobile 1*',
-                          ),
-                          keyboardType: TextInputType.phone,
-                          inputFormatters: [PhoneNumberFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validatePhone(v, isRequired: true),
-                          onChanged: (v) =>
-                              controller.setField('landlord_mobile_1', v),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: _val('landlord_mobile_2'),
-                          decoration: _decoration.copyWith(
-                            labelText: 'Mobile 2',
-                          ),
-                          keyboardType: TextInputType.phone,
-                          inputFormatters: [PhoneNumberFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                          onChanged: (v) =>
-                              controller.setField('landlord_mobile_2', v),
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    initialValue: _val('landlord_mobile_1'),
+                    decoration: _decoration.copyWith(labelText: 'Mobile 1*'),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: true),
+                    onChanged: (v) =>
+                        controller.setField('landlord_mobile_1', v),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: _val('landlord_mobile_2'),
+                    decoration: _decoration.copyWith(labelText: 'Mobile 2'),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: false),
+                    onChanged: (v) =>
+                        controller.setField('landlord_mobile_2', v),
                   ),
                 ],
               ),
@@ -553,47 +549,25 @@ class _StepForms extends StatelessWidget {
               _SectionCard(
                 title: 'Address',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: _val('landlord_street_number'),
-                          decoration: _decoration.copyWith(
-                            labelText: 'Street No',
-                          ),
-                          onChanged: (v) =>
-                              controller.setField('landlord_street_number', v),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: _val('landlord_street_name'),
-                          decoration: _decoration.copyWith(
-                            labelText: 'Street Name',
-                          ),
-                          onChanged: (v) =>
-                              controller.setField('landlord_street_name', v),
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    initialValue: _val('landlord_street_number'),
+                    decoration: _decoration.copyWith(labelText: 'Street No'),
+                    onChanged: (v) =>
+                        controller.setField('landlord_street_number', v),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          initialValue: _val('landlord_postcode'),
-                          decoration: _decoration.copyWith(
-                            labelText: 'Postcode',
-                          ),
-                          onChanged: (v) =>
-                              controller.setField('landlord_postcode', v),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(child: SizedBox.shrink()),
-                    ],
+                  TextFormField(
+                    initialValue: _val('landlord_street_name'),
+                    decoration: _decoration.copyWith(labelText: 'Street Name'),
+                    onChanged: (v) =>
+                        controller.setField('landlord_street_name', v),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    initialValue: _val('landlord_postcode'),
+                    decoration: _decoration.copyWith(labelText: 'Postcode'),
+                    onChanged: (v) =>
+                        controller.setField('landlord_postcode', v),
                   ),
                 ],
               ),
@@ -601,76 +575,52 @@ class _StepForms extends StatelessWidget {
               _SectionCard(
                 title: 'Administrative',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _AdminSelect(
-                          controller: controller,
-                          dataKey: 'wards',
-                          payloadKey: 'landlord_ward',
-                          label: 'Ward',
-                          requiredField: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _AdminSelect(
-                          controller: controller,
-                          dataKey: 'constituencies',
-                          payloadKey: 'landlord_constituency',
-                          label: 'Constituency',
-                          requiredField: true,
-                        ),
-                      ),
-                    ],
+                  _AdminSelect(
+                    controller: controller,
+                    dataKey: 'wards',
+                    payloadKey: 'landlord_ward',
+                    label: 'Ward',
+                    requiredField: true,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _AdminSelect(
-                          controller: controller,
-                          dataKey: 'sections',
-                          payloadKey: 'landlord_section',
-                          label: 'Section',
-                          requiredField: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _AdminSelect(
-                          controller: controller,
-                          dataKey: 'chiefdoms',
-                          payloadKey: 'landlord_chiefdom',
-                          label: 'Chiefdom',
-                          requiredField: true,
-                        ),
-                      ),
-                    ],
+                  _AdminSelect(
+                    controller: controller,
+                    dataKey: 'constituencies',
+                    payloadKey: 'landlord_constituency',
+                    label: 'Constituency',
+                    requiredField: true,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _AdminSelect(
-                          controller: controller,
-                          dataKey: 'districts',
-                          payloadKey: 'landlord_district',
-                          label: 'District',
-                          requiredField: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _AdminSelect(
-                          controller: controller,
-                          dataKey: 'provinces',
-                          payloadKey: 'landlord_province',
-                          label: 'Province',
-                          requiredField: true,
-                        ),
-                      ),
-                    ],
+                  _AdminSelect(
+                    controller: controller,
+                    dataKey: 'sections',
+                    payloadKey: 'landlord_section',
+                    label: 'Section',
+                    requiredField: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminSelect(
+                    controller: controller,
+                    dataKey: 'chiefdoms',
+                    payloadKey: 'landlord_chiefdom',
+                    label: 'Chiefdom',
+                    requiredField: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminSelect(
+                    controller: controller,
+                    dataKey: 'districts',
+                    payloadKey: 'landlord_district',
+                    label: 'District',
+                    requiredField: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _AdminSelect(
+                    controller: controller,
+                    dataKey: 'provinces',
+                    payloadKey: 'landlord_province',
+                    label: 'Province',
+                    requiredField: true,
                   ),
                 ],
               ),
@@ -688,19 +638,35 @@ class _StepForms extends StatelessWidget {
             _SectionCard(
               title: 'Category Type',
               children: [
-                DropdownButtonFormField<String>(
-                  decoration: _decoration.copyWith(labelText: 'Category Type*'),
-                  items: const [
-                    DropdownMenuItem(value: 'R', child: Text('Residential')),
-                    DropdownMenuItem(value: 'C', child: Text('Commercial')),
+                DropdownSearch<String>(
+                  items: (filter, infiniteScrollProps) => const [
+                    'Residential',
+                    'Commercial',
                   ],
-                  value: _val('categoryType'),
-                  isExpanded: true,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  decoratorProps: DropDownDecoratorProps(
+                    decoration: _decoration.copyWith(
+                      labelText: 'Category Type*',
+                    ),
+                  ),
+                  popupProps: const PopupProps.menu(
+                    showSearchBox: true,
+                    searchFieldProps: TextFieldProps(
+                      decoration: InputDecoration(
+                        hintText: 'Search category...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  selectedItem: _val('categoryType') == 'R'
+                      ? 'Residential'
+                      : (_val('categoryType') == 'C' ? 'Commercial' : null),
                   validator: (v) => (v == null || v.toString().trim().isEmpty)
                       ? 'Required'
                       : null,
-                  onChanged: (v) => controller.setField('categoryType', v),
+                  onChanged: (v) => controller.setField(
+                    'categoryType',
+                    v == 'Residential' ? 'R' : 'C',
+                  ),
                 ),
               ],
             ),
@@ -729,47 +695,48 @@ class _StepForms extends StatelessWidget {
                   );
                 }),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  decoration: _decoration.copyWith(
-                    labelText: 'Is Draft Delivered?',
+                DropdownSearch<String>(
+                  items: (filter, infiniteScrollProps) => const ['No', 'Yes'],
+                  decoratorProps: DropDownDecoratorProps(
+                    decoration: _decoration.copyWith(
+                      labelText: 'Is Draft Delivered?',
+                    ),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: '0', child: Text('No')),
-                    DropdownMenuItem(value: '1', child: Text('Yes')),
-                  ],
-                  value: _val('is_draft_delivered'),
-                  onChanged: (v) =>
-                      controller.setField('is_draft_delivered', v),
+                  popupProps: const PopupProps.menu(
+                    showSearchBox: true,
+                    searchFieldProps: TextFieldProps(
+                      decoration: InputDecoration(
+                        hintText: 'Search...',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  selectedItem: _val('is_draft_delivered') == '0'
+                      ? 'No'
+                      : (_val('is_draft_delivered') == '1' ? 'Yes' : null),
+                  onChanged: (v) => controller.setField(
+                    'is_draft_delivered',
+                    v == 'Yes' ? '1' : '0',
+                  ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('delivered_name'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Recipient Name',
-                        ),
-                        onChanged: (v) =>
-                            controller.setField('delivered_name', v),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('delivered_number'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Recipient Number',
-                        ),
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [PhoneNumberFormatter()],
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                        onChanged: (v) =>
-                            controller.setField('delivered_number', v),
-                      ),
-                    ),
-                  ],
+                TextFormField(
+                  initialValue: _val('delivered_name'),
+                  decoration: _decoration.copyWith(labelText: 'Recipient Name'),
+                  onChanged: (v) => controller.setField('delivered_name', v),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: _val('delivered_number'),
+                  decoration: _decoration.copyWith(
+                    labelText: 'Recipient Number',
+                  ),
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [PhoneNumberFormatter()],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: (v) =>
+                      ValidationUtils.validatePhone(v, isRequired: false),
+                  onChanged: (v) => controller.setField('delivered_number', v),
                 ),
               ],
             ),
@@ -778,30 +745,20 @@ class _StepForms extends StatelessWidget {
             _SectionCard(
               title: 'Address',
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('property_street_number'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Street Number',
-                        ),
-                        onChanged: (v) =>
-                            controller.setField('property_street_number', v),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('property_street_numbernew'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Street Number (New)',
-                        ),
-                        onChanged: (v) =>
-                            controller.setField('property_street_numbernew', v),
-                      ),
-                    ),
-                  ],
+                TextFormField(
+                  initialValue: _val('property_street_number'),
+                  decoration: _decoration.copyWith(labelText: 'Street Number'),
+                  onChanged: (v) =>
+                      controller.setField('property_street_number', v),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: _val('property_street_numbernew'),
+                  decoration: _decoration.copyWith(
+                    labelText: 'Street Number (New)',
+                  ),
+                  onChanged: (v) =>
+                      controller.setField('property_street_numbernew', v),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -811,19 +768,10 @@ class _StepForms extends StatelessWidget {
                       controller.setField('property_street_name', v),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('property_postcode'),
-                        decoration: _decoration.copyWith(labelText: 'Postcode'),
-                        onChanged: (v) =>
-                            controller.setField('property_postcode', v),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(child: SizedBox.shrink()),
-                  ],
+                TextFormField(
+                  initialValue: _val('property_postcode'),
+                  decoration: _decoration.copyWith(labelText: 'Postcode'),
+                  onChanged: (v) => controller.setField('property_postcode', v),
                 ),
               ],
             ),
@@ -831,70 +779,46 @@ class _StepForms extends StatelessWidget {
             _SectionCard(
               title: 'Administrative',
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AdminSelect(
-                        controller: controller,
-                        dataKey: 'wards',
-                        payloadKey: 'property_ward',
-                        label: 'Ward',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _AdminSelect(
-                        controller: controller,
-                        dataKey: 'constituencies',
-                        payloadKey: 'property_constituency',
-                        label: 'Constituency',
-                      ),
-                    ),
-                  ],
+                _AdminSelect(
+                  controller: controller,
+                  dataKey: 'wards',
+                  payloadKey: 'property_ward',
+                  label: 'Ward',
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AdminSelect(
-                        controller: controller,
-                        dataKey: 'sections',
-                        payloadKey: 'property_section',
-                        label: 'Section',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _AdminSelect(
-                        controller: controller,
-                        dataKey: 'chiefdoms',
-                        payloadKey: 'property_chiefdom',
-                        label: 'Chiefdom',
-                      ),
-                    ),
-                  ],
+                _AdminSelect(
+                  controller: controller,
+                  dataKey: 'constituencies',
+                  payloadKey: 'property_constituency',
+                  label: 'Constituency',
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _AdminSelect(
-                        controller: controller,
-                        dataKey: 'districts',
-                        payloadKey: 'property_district',
-                        label: 'District',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _AdminSelect(
-                        controller: controller,
-                        dataKey: 'provinces',
-                        payloadKey: 'property_province',
-                        label: 'Province',
-                      ),
-                    ),
-                  ],
+                _AdminSelect(
+                  controller: controller,
+                  dataKey: 'sections',
+                  payloadKey: 'property_section',
+                  label: 'Section',
+                ),
+                const SizedBox(height: 12),
+                _AdminSelect(
+                  controller: controller,
+                  dataKey: 'chiefdoms',
+                  payloadKey: 'property_chiefdom',
+                  label: 'Chiefdom',
+                ),
+                const SizedBox(height: 12),
+                _AdminSelect(
+                  controller: controller,
+                  dataKey: 'districts',
+                  payloadKey: 'property_district',
+                  label: 'District',
+                ),
+                const SizedBox(height: 12),
+                _AdminSelect(
+                  controller: controller,
+                  dataKey: 'provinces',
+                  payloadKey: 'property_province',
+                  label: 'Province',
                 ),
               ],
             ),
@@ -928,55 +852,37 @@ class _StepForms extends StatelessWidget {
             _SectionCard(
               title: 'Tenant Information',
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TitleSelect(
-                        controller: controller,
-                        payloadKey: 'tenant_ownerTitle_id',
-                        label: 'Title',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('occupancy_tenant_first_name'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Tenant First Name',
-                        ),
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Tenant First Name'),
-                        onChanged: (v) => controller.setField(
-                          'occupancy_tenant_first_name',
-                          v,
-                        ),
-                      ),
-                    ),
-                  ],
+                _TitleSelect(
+                  controller: controller,
+                  payloadKey: 'tenant_ownerTitle_id',
+                  label: 'Title',
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('occupancy_middle_name'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Middle Name',
-                        ),
-                        onChanged: (v) =>
-                            controller.setField('occupancy_middle_name', v),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('occupancy_surname'),
-                        decoration: _decoration.copyWith(labelText: 'Surname'),
-                        onChanged: (v) =>
-                            controller.setField('occupancy_surname', v),
-                      ),
-                    ),
-                  ],
+                TextFormField(
+                  initialValue: _val('occupancy_tenant_first_name'),
+                  decoration: _decoration.copyWith(
+                    labelText: 'Tenant First Name',
+                  ),
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: (v) => ValidationUtils.validateRequired(
+                    v,
+                    fieldName: 'Tenant First Name',
+                  ),
+                  onChanged: (v) =>
+                      controller.setField('occupancy_tenant_first_name', v),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: _val('occupancy_middle_name'),
+                  decoration: _decoration.copyWith(labelText: 'Middle Name'),
+                  onChanged: (v) =>
+                      controller.setField('occupancy_middle_name', v),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: _val('occupancy_surname'),
+                  decoration: _decoration.copyWith(labelText: 'Surname'),
+                  onChanged: (v) => controller.setField('occupancy_surname', v),
                 ),
               ],
             ),
@@ -984,38 +890,32 @@ class _StepForms extends StatelessWidget {
             _SectionCard(
               title: 'Contact',
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('occupancy_mobile_1'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Mobile Number 1',
-                        ),
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [PhoneNumberFormatter()],
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                        onChanged: (v) =>
-                            controller.setField('occupancy_mobile_1', v),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _val('occupancy_mobile_2'),
-                        decoration: _decoration.copyWith(
-                          labelText: 'Mobile Number 2',
-                        ),
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [PhoneNumberFormatter()],
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                        onChanged: (v) =>
-                            controller.setField('occupancy_mobile_2', v),
-                      ),
-                    ),
-                  ],
+                TextFormField(
+                  initialValue: _val('occupancy_mobile_1'),
+                  decoration: _decoration.copyWith(
+                    labelText: 'Mobile Number 1',
+                  ),
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [PhoneNumberFormatter()],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: (v) =>
+                      ValidationUtils.validatePhone(v, isRequired: false),
+                  onChanged: (v) =>
+                      controller.setField('occupancy_mobile_1', v),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  initialValue: _val('occupancy_mobile_2'),
+                  decoration: _decoration.copyWith(
+                    labelText: 'Mobile Number 2',
+                  ),
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [PhoneNumberFormatter()],
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  validator: (v) =>
+                      ValidationUtils.validatePhone(v, isRequired: false),
+                  onChanged: (v) =>
+                      controller.setField('occupancy_mobile_2', v),
                 ),
               ],
             ),
@@ -1024,7 +924,6 @@ class _StepForms extends StatelessWidget {
       );
     }
     if (step == 3) {
-
       return Form(
         key: controller.step4Key,
         autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -1186,7 +1085,8 @@ class _StepForms extends StatelessWidget {
                                       labelText: 'Meter Number',
                                     ),
                                     keyboardType: TextInputType.text,
-                                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                                    autovalidateMode:
+                                        AutovalidateMode.onUserInteraction,
                                     validator: (v) {
                                       // Required if meter image is present
                                       if (hasImage &&
@@ -1273,26 +1173,18 @@ class _StepForms extends StatelessWidget {
           _SectionCard(
             title: 'Materials',
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _SingleSelectVariablesDropdown(
-                      controller: controller,
-                      dataKey: 'property_wall_materials',
-                      payloadKey: 'assessment_wall_materials_id',
-                      label: 'Wall Material',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SingleSelectVariablesDropdown(
-                      controller: controller,
-                      dataKey: 'property_roofs_materials',
-                      payloadKey: 'assessment_roofs_materials_id',
-                      label: 'Roof Material',
-                    ),
-                  ),
-                ],
+              _SingleSelectVariablesDropdown(
+                controller: controller,
+                dataKey: 'property_wall_materials',
+                payloadKey: 'assessment_wall_materials_id',
+                label: 'Wall Material',
+              ),
+              const SizedBox(height: 12),
+              _SingleSelectVariablesDropdown(
+                controller: controller,
+                dataKey: 'property_roofs_materials',
+                payloadKey: 'assessment_roofs_materials_id',
+                label: 'Roof Material',
               ),
               const SizedBox(height: 12),
               _SingleSelectVariablesDropdown(
@@ -1308,58 +1200,56 @@ class _StepForms extends StatelessWidget {
           _SectionCard(
             title: 'Dimensions',
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      key: const ValueKey('length_field'),
-                      initialValue: _val('assessment_length'),
-                      decoration: _decoration.copyWith(labelText: 'length'),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) {
-                        final breadthValue = _val('assessment_breadth');
-                        final decimalError = ValidationUtils.validateDecimal(v, decimalPlaces: 2, isRequired: false);
-                        if (decimalError != null) return decimalError;
-                        return ValidationUtils.validateLengthGreaterThanBreadth(v, breadthValue);
-                      },
-                      onChanged: (v) {
-                        controller.setField('assessment_length', v);
-                        // Trigger validation on breadth field when length changes
-                        if (controller.step5Key.currentState != null) {
-                          controller.step5Key.currentState!.validate();
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      key: const ValueKey('breadth_field'),
-                      initialValue: _val('assessment_breadth'),
-                      decoration: _decoration.copyWith(labelText: 'breadth'),
-                      keyboardType: TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) {
-                        final lengthValue = _val('assessment_length');
-                        return ValidationUtils.validateLengthGreaterThanBreadth(lengthValue, v);
-                      },
-                      onChanged: (v) {
-                        controller.setField('assessment_breadth', v);
-                        // Trigger validation on length field when breadth changes
-                        if (controller.step5Key.currentState != null) {
-                          controller.step5Key.currentState!.validate();
-                        }
-                      },
-                    ),
-                  ),
-                ],
+              TextFormField(
+                key: const ValueKey('length_field'),
+                initialValue: _val('assessment_length'),
+                decoration: _decoration.copyWith(labelText: 'length'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) {
+                  final breadthValue = _val('assessment_breadth');
+                  final decimalError = ValidationUtils.validateDecimal(
+                    v,
+                    decimalPlaces: 2,
+                    isRequired: false,
+                  );
+                  if (decimalError != null) return decimalError;
+                  return ValidationUtils.validateLengthGreaterThanBreadth(
+                    v,
+                    breadthValue,
+                  );
+                },
+                onChanged: (v) {
+                  controller.setField('assessment_length', v);
+                  // Trigger validation on breadth field when length changes
+                  if (controller.step5Key.currentState != null) {
+                    controller.step5Key.currentState!.validate();
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                key: const ValueKey('breadth_field'),
+                initialValue: _val('assessment_breadth'),
+                decoration: _decoration.copyWith(labelText: 'breadth'),
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) {
+                  final lengthValue = _val('assessment_length');
+                  return ValidationUtils.validateLengthGreaterThanBreadth(
+                    lengthValue,
+                    v,
+                  );
+                },
+                onChanged: (v) {
+                  controller.setField('assessment_breadth', v);
+                  // Trigger validation on length field when breadth changes
+                  if (controller.step5Key.currentState != null) {
+                    controller.step5Key.currentState!.validate();
+                  }
+                },
               ),
             ],
           ),
@@ -1368,61 +1258,50 @@ class _StepForms extends StatelessWidget {
           _SectionCard(
             title: 'Property Details',
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _SingleSelectVariablesDropdown(
-                      controller: controller,
-                      dataKey: 'property_uses',
-                      payloadKey: 'assessment_use_id',
-                      label: 'Property use',
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _SingleSelectVariablesDropdown(
-                      controller: controller,
-                      dataKey: 'property_zones',
-                      payloadKey: 'assessment_zone_id',
-                      label: 'Property zone',
-                    ),
-                  ),
-                ],
+              _SingleSelectVariablesDropdown(
+                controller: controller,
+                dataKey: 'property_uses',
+                payloadKey: 'assessment_use_id',
+                label: 'Property use',
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SingleSelectVariablesDropdown(
-                      controller: controller,
-                      dataKey: 'swimmings',
-                      payloadKey: 'swimming_pool',
-                      label: 'Swimming pool',
+              _SingleSelectVariablesDropdown(
+                controller: controller,
+                dataKey: 'property_zones',
+                payloadKey: 'assessment_zone_id',
+                label: 'Property zone',
+              ),
+              const SizedBox(height: 12),
+              _SingleSelectVariablesDropdown(
+                controller: controller,
+                dataKey: 'swimmings',
+                payloadKey: 'swimming_pool',
+                label: 'Swimming pool',
+              ),
+              const SizedBox(height: 12),
+              DropdownSearch<String>(
+                items: (filter, infiniteScrollProps) => const ['No', 'Yes'],
+                decoratorProps: DropDownDecoratorProps(
+                  decoration: _decoration.copyWith(
+                    labelText: 'Gated community',
+                  ),
+                ),
+                popupProps: const PopupProps.menu(
+                  showSearchBox: true,
+                  searchFieldProps: TextFieldProps(
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      decoration: _decoration.copyWith(
-                        labelText: 'Gated community',
-                      ),
-                      value: _val('gated_community'),
-                      isExpanded: true,
-                      selectedItemBuilder: (BuildContext context) {
-                        return const [
-                          Text('No', overflow: TextOverflow.ellipsis),
-                          Text('Yes', overflow: TextOverflow.ellipsis),
-                        ];
-                      },
-                      items: const [
-                        DropdownMenuItem(value: '0', child: Text('No')),
-                        DropdownMenuItem(value: '1', child: Text('Yes')),
-                      ],
-                      onChanged: (v) =>
-                          controller.setField('gated_community', v),
-                    ),
-                  ),
-                ],
+                ),
+                selectedItem: _val('gated_community') == '0'
+                    ? 'No'
+                    : (_val('gated_community') == '1' ? 'Yes' : null),
+                onChanged: (v) => controller.setField(
+                  'gated_community',
+                  v == 'Yes' ? '1' : '0',
+                ),
               ),
             ],
           ),
@@ -1431,65 +1310,55 @@ class _StepForms extends StatelessWidget {
           _SectionCard(
             title: 'Additional Information',
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('total_mast'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'No of Masts',
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [IntegerInputFormatter()],
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
-                      onChanged: (v) => controller.setField('total_mast', v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('total_shops'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'No of Shops',
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [IntegerInputFormatter()],
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
-                      onChanged: (v) => controller.setField('total_shops', v),
-                    ),
-                  ),
-                ],
+              TextFormField(
+                initialValue: _val('total_mast'),
+                decoration: _decoration.copyWith(labelText: 'No of Masts'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [IntegerInputFormatter()],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) => ValidationUtils.validateInteger(
+                  v,
+                  min: 0,
+                  isRequired: false,
+                ),
+                onChanged: (v) => controller.setField('total_mast', v),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('total_compound_house'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'No of Compound House',
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [IntegerInputFormatter()],
-                      autovalidateMode: AutovalidateMode.onUserInteraction,
-                      validator: (v) => ValidationUtils.validateInteger(v, min: 0, isRequired: false),
-                      onChanged: (v) =>
-                          controller.setField('total_compound_house', v),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      initialValue: _val('compound_name'),
-                      decoration: _decoration.copyWith(
-                        labelText: 'Compound Name',
-                      ),
-                      onChanged: (v) => controller.setField('compound_name', v),
-                    ),
-                  ),
-                ],
+              TextFormField(
+                initialValue: _val('total_shops'),
+                decoration: _decoration.copyWith(labelText: 'No of Shops'),
+                keyboardType: TextInputType.number,
+                inputFormatters: [IntegerInputFormatter()],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) => ValidationUtils.validateInteger(
+                  v,
+                  min: 0,
+                  isRequired: false,
+                ),
+                onChanged: (v) => controller.setField('total_shops', v),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: _val('total_compound_house'),
+                decoration: _decoration.copyWith(
+                  labelText: 'No of Compound House',
+                ),
+                keyboardType: TextInputType.number,
+                inputFormatters: [IntegerInputFormatter()],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) => ValidationUtils.validateInteger(
+                  v,
+                  min: 0,
+                  isRequired: false,
+                ),
+                onChanged: (v) =>
+                    controller.setField('total_compound_house', v),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: _val('compound_name'),
+                decoration: _decoration.copyWith(labelText: 'Compound Name'),
+                onChanged: (v) => controller.setField('compound_name', v),
               ),
             ],
           ),
@@ -2161,40 +2030,51 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
     final List<Map<String, dynamic>> opts = _options;
     final String? selectedValue = controller.payload[payloadKey] as String?;
 
-    return DropdownButtonFormField<String>(
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green, width: 2),
-        ),
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ).copyWith(labelText: label),
-      value: selectedValue,
-      isExpanded: true,
-      selectedItemBuilder: (BuildContext context) {
-        return opts.map<Widget>((Map<String, dynamic> o) {
-          final String text = o['label']?.toString() ?? 'Item';
-          return Text(
-            text,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 16),
-          );
-        }).toList();
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        return opts.map((o) => (o['id'] ?? o['value']).toString()).toList();
       },
-      items: [
-        for (final Map<String, dynamic> o in opts)
-          DropdownMenuItem<String>(
-            value: (o['id'] ?? o['value']).toString(),
-            child: Text(
-              o['label']?.toString() ?? 'Item',
-              overflow: TextOverflow.ellipsis,
-            ),
+      decoratorProps: DropDownDecoratorProps(
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
           ),
-      ],
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green, width: 2),
+          ),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ).copyWith(labelText: label),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = opts.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      selectedItem: selectedValue,
+      compareFn: (item1, item2) => item1 == item2,
       onChanged: (v) => controller.setField(payloadKey, v),
     );
   }
@@ -2238,42 +2118,61 @@ class _SingleSelectVariablesDropdownToArray extends StatelessWidget {
     return Obx(() {
       final int _ = controller.variablesTick.value; // dependency only
       final List<Map<String, dynamic>> opts = _options;
-      return DropdownButtonFormField<String>(
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green),
+
+      final String? currentValue = () {
+        final dynamic v = controller.payload[payloadKey];
+        if (v is List && v.isNotEmpty) return v.first.toString();
+        if (v is String) return v;
+        return null;
+      }();
+
+      return DropdownSearch<String>(
+        items: (filter, infiniteScrollProps) {
+          if (opts.isEmpty) return [];
+          return opts.map((o) => (o['id'] ?? o['value']).toString()).toList();
+        },
+        decoratorProps: DropDownDecoratorProps(
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.green),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.green),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.green, width: 2),
+            ),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          ).copyWith(labelText: label),
+        ),
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: const TextFieldProps(
+            decoration: InputDecoration(
+              hintText: 'Search...',
+              border: OutlineInputBorder(),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green, width: 2),
-          ),
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        ).copyWith(labelText: label),
-        isExpanded: true,
-        value: () {
-          final dynamic v = controller.payload[payloadKey];
-          if (v is List && v.isNotEmpty) return v.first.toString();
-          if (v is String) return v;
-          return null;
-        }(),
-        items: opts.isEmpty
-            ? [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  enabled: false,
-                  child: Text('Loading options...'),
+          itemBuilder: (context, item, isDisabled, isSelected) {
+            final option = opts.firstWhere(
+              (o) => (o['id'] ?? o['value']).toString() == item,
+              orElse: () => {'label': item},
+            );
+            return ListTile(
+              title: Text(
+                option['label']?.toString() ?? 'Item',
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
-              ]
-            : [
-                for (final Map<String, dynamic> o in opts)
-                  DropdownMenuItem<String>(
-                    value: (o['id'] ?? o['value']).toString(),
-                    child: Text(o['label']?.toString() ?? 'Item'),
-                  ),
-              ],
+              ),
+              selected: isSelected,
+            );
+          },
+        ),
+        enabled: opts.isNotEmpty,
+        selectedItem: currentValue,
+        compareFn: (item1, item2) => item1 == item2,
         onChanged: opts.isEmpty
             ? null
             : (v) => controller.setField(
@@ -2349,54 +2248,65 @@ class _AdminSelect extends StatelessWidget {
     return Obx(() {
       final int _ = controller.variablesTick.value; // dependency only
       final List<Map<String, dynamic>> opts = _options;
+      final String? currentValue = opts.isEmpty
+          ? null
+          : (controller.payload[payloadKey] as String?)?.toString();
 
       // Always show dropdown, even if empty (will be disabled)
-      return DropdownButtonFormField<String>(
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green, width: 2),
-          ),
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        ).copyWith(labelText: label),
-        isExpanded: true,
-        value: opts.isEmpty
-            ? null
-            : (controller.payload[payloadKey] as String?)?.toString(),
-        hint: opts.isEmpty
-            ? const Text('Loading...', style: TextStyle(color: Colors.grey))
-            : null,
-        selectedItemBuilder: opts.isEmpty
-            ? null
-            : (context) => [
-                for (final Map<String, dynamic> o in opts)
-                  Text(
-                    o['label']?.toString() ?? 'Item',
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-        items: opts.isEmpty
-            ? [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  enabled: false,
-                  child: Text('Loading options...'),
+      return DropdownSearch<String>(
+        items: (filter, infiniteScrollProps) {
+          if (opts.isEmpty) return [];
+          return opts.map((o) => (o['id'] ?? o['value']).toString()).toList();
+        },
+        decoratorProps: DropDownDecoratorProps(
+          decoration:
+              const InputDecoration(
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.green),
                 ),
-              ]
-            : [
-                for (final Map<String, dynamic> o in opts)
-                  DropdownMenuItem<String>(
-                    value: (o['id'] ?? o['value']).toString(),
-                    child: Text(o['label']?.toString() ?? 'Item'),
-                  ),
-              ],
-        autovalidateMode: AutovalidateMode.onUserInteraction,
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.green),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.green, width: 2),
+                ),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ).copyWith(
+                labelText: label,
+                hintText: opts.isEmpty ? 'Loading...' : null,
+              ),
+        ),
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: const TextFieldProps(
+            decoration: InputDecoration(
+              hintText: 'Search...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          itemBuilder: (context, item, isDisabled, isSelected) {
+            final option = opts.firstWhere(
+              (o) => (o['id'] ?? o['value']).toString() == item,
+              orElse: () => {'label': item},
+            );
+            return ListTile(
+              title: Text(
+                option['label']?.toString() ?? 'Item',
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              selected: isSelected,
+            );
+          },
+        ),
+        enabled: opts.isNotEmpty,
+        selectedItem: currentValue,
+        compareFn: (item1, item2) => item1 == item2,
         validator: (v) =>
             requiredField && (v == null || v.isEmpty) ? 'Required' : null,
         onChanged: opts.isEmpty
@@ -2496,55 +2406,75 @@ class _TitleSelect extends StatelessWidget {
           controller.payload[payloadKey] as String? ??
           controller.payload['ownerTitle'] as String?;
 
-      return DropdownButtonFormField<String>(
-        decoration: const InputDecoration(
-          border: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.green, width: 2),
-          ),
-          isDense: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        ).copyWith(labelText: label),
-        value: opts.isEmpty ? null : selectedValue,
-        isExpanded: true,
-        hint: opts.isEmpty
-            ? const Text('Loading...', style: TextStyle(color: Colors.grey))
-            : null,
-        selectedItemBuilder: opts.isEmpty
-            ? null
-            : (context) => [
-                for (final Map<String, dynamic> o in opts)
-                  Text(
-                    o['label']?.toString() ?? 'Item',
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-        items: opts.isEmpty
-            ? [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  enabled: false,
-                  child: Text('Loading options...'),
+      return DropdownSearch<String>(
+        items: (filter, infiniteScrollProps) {
+          if (opts.isEmpty) return [];
+          return opts.map((o) => o['label']?.toString() ?? 'Item').toList();
+        },
+        decoratorProps: DropDownDecoratorProps(
+          decoration:
+              const InputDecoration(
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.green),
                 ),
-              ]
-            : [
-                for (final Map<String, dynamic> o in opts)
-                  DropdownMenuItem<String>(
-                    value: (o['id'] ?? o['value']).toString(),
-                    child: Text(o['label']?.toString() ?? 'Item'),
-                  ),
-              ],
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.green),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.green, width: 2),
+                ),
+                isDense: true,
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+              ).copyWith(
+                labelText: label,
+                hintText: opts.isEmpty ? 'Loading...' : null,
+              ),
+        ),
+        popupProps: PopupProps.menu(
+          showSearchBox: true,
+          searchFieldProps: const TextFieldProps(
+            decoration: InputDecoration(
+              hintText: 'Search...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          itemBuilder: (context, item, isDisabled, isSelected) {
+            return ListTile(
+              title: Text(
+                item,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              selected: isSelected,
+            );
+          },
+        ),
+        enabled: opts.isNotEmpty,
+        selectedItem: () {
+          if (opts.isEmpty || selectedValue == null) return null;
+          final option = opts.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == selectedValue,
+            orElse: () => <String, dynamic>{},
+          );
+          return option['label']?.toString();
+        }(),
+        compareFn: (item1, item2) => item1 == item2,
         onChanged: opts.isEmpty
             ? null
             : (v) {
-                controller.setField(payloadKey, v);
+                if (v == null) return;
+                final option = opts.firstWhere(
+                  (o) => o['label']?.toString() == v,
+                  orElse: () => <String, dynamic>{},
+                );
+                final id = (option['id'] ?? option['value']).toString();
+                controller.setField(payloadKey, id);
                 if (payloadKey == 'landlord_ownerTitle_id') {
-                  controller.setField('ownerTitle', v);
+                  controller.setField('ownerTitle', id);
                 }
               },
       );

@@ -23,15 +23,24 @@ class ValidationUtils {
     return null;
   }
 
-  /// Validate phone number (Sierra Leone format: +232XXXXXXXXX or 0XXXXXXXXX)
+  /// Validate phone number (accepts international formats with country codes)
   static String? validatePhone(String? value, {bool isRequired = false}) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'Required' : null;
     }
-    final phoneRegex = RegExp(r'^(\+232|0)[0-9]{8,9}$');
-    if (!phoneRegex.hasMatch(value.trim())) {
-      return 'Enter a valid phone number (e.g., +232XXXXXXXXX or 0XXXXXXXXX)';
+
+    final cleaned = value.trim().replaceAll(RegExp(r'\s+'), '');
+
+    // Accept formats:
+    // - International: +XX XXXXXXXXXX (with country code)
+    // - Local: XXXXXXXXXX (without leading 0 or with it)
+    // Minimum 7 digits, maximum 15 digits (international standard)
+    final phoneRegex = RegExp(r'^(\+\d{1,3}\s?)?\d{7,15}$');
+
+    if (!phoneRegex.hasMatch(cleaned)) {
+      return 'Enter a valid phone number (e.g., +91 1234567890 or 1234567890)';
     }
+
     return null;
   }
 
@@ -60,7 +69,12 @@ class ValidationUtils {
   }
 
   /// Validate number with optional min/max
-  static String? validateNumber(String? value, {double? min, double? max, bool isRequired = false}) {
+  static String? validateNumber(
+    String? value, {
+    double? min,
+    double? max,
+    bool isRequired = false,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'Required' : null;
     }
@@ -78,7 +92,11 @@ class ValidationUtils {
   }
 
   /// Validate decimal number
-  static String? validateDecimal(String? value, {int? decimalPlaces, bool isRequired = false}) {
+  static String? validateDecimal(
+    String? value, {
+    int? decimalPlaces,
+    bool isRequired = false,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'Required' : null;
     }
@@ -96,7 +114,12 @@ class ValidationUtils {
   }
 
   /// Validate string length
-  static String? validateLength(String? value, {int? minLength, int? maxLength, bool isRequired = false}) {
+  static String? validateLength(
+    String? value, {
+    int? minLength,
+    int? maxLength,
+    bool isRequired = false,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'Required' : null;
     }
@@ -111,8 +134,14 @@ class ValidationUtils {
   }
 
   /// Business logic: Validate that length is greater than breadth
-  static String? validateLengthGreaterThanBreadth(String? length, String? breadth) {
-    if (length == null || length.trim().isEmpty || breadth == null || breadth.trim().isEmpty) {
+  static String? validateLengthGreaterThanBreadth(
+    String? length,
+    String? breadth,
+  ) {
+    if (length == null ||
+        length.trim().isEmpty ||
+        breadth == null ||
+        breadth.trim().isEmpty) {
       return null; // Let required validation handle empty fields
     }
     final double? lengthValue = double.tryParse(length.trim());
@@ -127,7 +156,12 @@ class ValidationUtils {
   }
 
   /// Validate integer
-  static String? validateInteger(String? value, {int? min, int? max, bool isRequired = false}) {
+  static String? validateInteger(
+    String? value, {
+    int? min,
+    int? max,
+    bool isRequired = false,
+  }) {
     if (value == null || value.trim().isEmpty) {
       return isRequired ? 'Required' : null;
     }
@@ -144,4 +178,3 @@ class ValidationUtils {
     return null;
   }
 }
-

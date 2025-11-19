@@ -305,35 +305,27 @@ class _EditGeoViewState extends State<EditGeoView> {
               _SectionCard(
                 title: 'Location',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _dorLatLongController,
-                          decoration: _decoration.copyWith(
-                            labelText: 'Dor Lat Long',
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.my_location),
-                              tooltip: 'Use current location',
-                              onPressed: () => _fetchLocationForPoint(1),
-                            ),
-                          ),
-                          readOnly: true,
-                          inputFormatters: [CoordinateFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: ValidationUtils.validateLatLong,
-                        ),
+                  TextFormField(
+                    controller: _dorLatLongController,
+                    decoration: _decoration.copyWith(
+                      labelText: 'Dor Lat Long',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.my_location),
+                        tooltip: 'Use current location',
+                        onPressed: () => _fetchLocationForPoint(1),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _digitalAddressController,
-                          decoration: _decoration.copyWith(
-                            labelText: 'Digital Address',
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
+                    readOnly: true,
+                    inputFormatters: [CoordinateFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: ValidationUtils.validateLatLong,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _digitalAddressController,
+                    decoration: _decoration.copyWith(
+                      labelText: 'Digital Address',
+                    ),
                   ),
                 ],
               ),

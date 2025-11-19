@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
@@ -335,26 +336,18 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
               _SectionCard(
                 title: 'Materials',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSingleSelectDropdown(
-                          'property_wall_materials',
-                          'Wall Material',
-                          _wallMaterials,
-                          (v) => setState(() => _wallMaterials = v),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSingleSelectDropdown(
-                          'property_roofs_materials',
-                          'Roof Material',
-                          _roofsMaterials,
-                          (v) => setState(() => _roofsMaterials = v),
-                        ),
-                      ),
-                    ],
+                  _buildSingleSelectDropdown(
+                    'property_wall_materials',
+                    'Wall Material',
+                    _wallMaterials,
+                    (v) => setState(() => _wallMaterials = v),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSingleSelectDropdown(
+                    'property_roofs_materials',
+                    'Roof Material',
+                    _roofsMaterials,
+                    (v) => setState(() => _roofsMaterials = v),
                   ),
                   const SizedBox(height: 12),
                   _buildSingleSelectDropdown(
@@ -369,73 +362,58 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
               _SectionCard(
                 title: 'Dimensions',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          key: const ValueKey('length_field'),
-                          controller: _controllers['length'],
-                          decoration: _decoration.copyWith(labelText: 'length'),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            DecimalInputFormatter(decimalPlaces: 2),
-                          ],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) {
-                            final breadthValue = _controllers['breadth']?.text;
-                            final decimalError =
-                                ValidationUtils.validateDecimal(
-                                  v,
-                                  decimalPlaces: 2,
-                                  isRequired: false,
-                                );
-                            if (decimalError != null) return decimalError;
-                            return ValidationUtils.validateLengthGreaterThanBreadth(
-                              v,
-                              breadthValue,
-                            );
-                          },
-                          onChanged: (v) {
-                            // Trigger validation on breadth field when length changes
-                            if (_formKey.currentState != null) {
-                              _formKey.currentState!.validate();
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          key: const ValueKey('breadth_field'),
-                          controller: _controllers['breadth'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'breadth',
-                          ),
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            DecimalInputFormatter(decimalPlaces: 2),
-                          ],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) {
-                            final lengthValue = _controllers['length']?.text;
-                            return ValidationUtils.validateLengthGreaterThanBreadth(
-                              lengthValue,
-                              v,
-                            );
-                          },
-                          onChanged: (v) {
-                            // Trigger validation on length field when breadth changes
-                            if (_formKey.currentState != null) {
-                              _formKey.currentState!.validate();
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    key: const ValueKey('length_field'),
+                    controller: _controllers['length'],
+                    decoration: _decoration.copyWith(labelText: 'length'),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) {
+                      final breadthValue = _controllers['breadth']?.text;
+                      final decimalError = ValidationUtils.validateDecimal(
+                        v,
+                        decimalPlaces: 2,
+                        isRequired: false,
+                      );
+                      if (decimalError != null) return decimalError;
+                      return ValidationUtils.validateLengthGreaterThanBreadth(
+                        v,
+                        breadthValue,
+                      );
+                    },
+                    onChanged: (v) {
+                      // Trigger validation on breadth field when length changes
+                      if (_formKey.currentState != null) {
+                        _formKey.currentState!.validate();
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    key: const ValueKey('breadth_field'),
+                    controller: _controllers['breadth'],
+                    decoration: _decoration.copyWith(labelText: 'breadth'),
+                    keyboardType: TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) {
+                      final lengthValue = _controllers['length']?.text;
+                      return ValidationUtils.validateLengthGreaterThanBreadth(
+                        lengthValue,
+                        v,
+                      );
+                    },
+                    onChanged: (v) {
+                      // Trigger validation on length field when breadth changes
+                      if (_formKey.currentState != null) {
+                        _formKey.currentState!.validate();
+                      }
+                    },
                   ),
                 ],
               ),
@@ -443,63 +421,49 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
               _SectionCard(
                 title: 'Property Details',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSingleSelectDropdown(
-                          'property_uses',
-                          'Property use',
-                          _propertyUse,
-                          (v) => setState(() => _propertyUse = v),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildSingleSelectDropdown(
-                          'property_zones',
-                          'Property zone',
-                          _zone,
-                          (v) => setState(() => _zone = v),
-                        ),
-                      ),
-                    ],
+                  _buildSingleSelectDropdown(
+                    'property_uses',
+                    'Property use',
+                    _propertyUse,
+                    (v) => setState(() => _propertyUse = v),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSingleSelectDropdown(
-                          'swimmings',
-                          'Swimming pool',
-                          _swimmingPool,
-                          (v) => setState(() => _swimmingPool = v),
+                  _buildSingleSelectDropdown(
+                    'property_zones',
+                    'Property zone',
+                    _zone,
+                    (v) => setState(() => _zone = v),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildSingleSelectDropdown(
+                    'swimmings',
+                    'Swimming pool',
+                    _swimmingPool,
+                    (v) => setState(() => _swimmingPool = v),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownSearch<String>(
+                    items: (filter, infiniteScrollProps) => const ['No', 'Yes'],
+                    decoratorProps: DropDownDecoratorProps(
+                      decoration: _decoration.copyWith(
+                        labelText: 'Gated community',
+                      ),
+                    ),
+                    popupProps: const PopupProps.menu(
+                      showSearchBox: true,
+                      searchFieldProps: TextFieldProps(
+                        decoration: InputDecoration(
+                          hintText: 'Search...',
+                          border: OutlineInputBorder(),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: DropdownButtonFormField<String>(
-                          decoration: _decoration.copyWith(
-                            labelText: 'Gated community',
-                          ),
-                          value:
-                              (_gatedCommunity == '0' || _gatedCommunity == '1')
-                              ? _gatedCommunity
-                              : '0', // Default to '0' if invalid value
-                          isExpanded: true,
-                          selectedItemBuilder: (BuildContext context) {
-                            return const [
-                              Text('No', overflow: TextOverflow.ellipsis),
-                              Text('Yes', overflow: TextOverflow.ellipsis),
-                            ];
-                          },
-                          items: const [
-                            DropdownMenuItem(value: '0', child: Text('No')),
-                            DropdownMenuItem(value: '1', child: Text('Yes')),
-                          ],
-                          onChanged: (v) => setState(() => _gatedCommunity = v),
-                        ),
-                      ),
-                    ],
+                    ),
+                    selectedItem: _gatedCommunity == '0'
+                        ? 'No'
+                        : (_gatedCommunity == '1' ? 'Yes' : 'No'),
+                    onChanged: (v) => setState(
+                      () => _gatedCommunity = v == 'Yes' ? '1' : '0',
+                    ),
                   ),
                 ],
               ),
@@ -507,72 +471,52 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
               _SectionCard(
                 title: 'Additional Information',
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['no_of_mast'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'No of Masts',
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [IntegerInputFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validateInteger(
-                            v,
-                            min: 0,
-                            isRequired: false,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['no_of_shop'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'No of Shops',
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [IntegerInputFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validateInteger(
-                            v,
-                            min: 0,
-                            isRequired: false,
-                          ),
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    controller: _controllers['no_of_mast'],
+                    decoration: _decoration.copyWith(labelText: 'No of Masts'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [IntegerInputFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateInteger(
+                      v,
+                      min: 0,
+                      isRequired: false,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['no_of_compound_house'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'No of Compound House',
-                          ),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [IntegerInputFormatter()],
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: (v) => ValidationUtils.validateInteger(
-                            v,
-                            min: 0,
-                            isRequired: false,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _controllers['compound_name'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Compound Name',
-                          ),
-                        ),
-                      ),
-                    ],
+                  TextFormField(
+                    controller: _controllers['no_of_shop'],
+                    decoration: _decoration.copyWith(labelText: 'No of Shops'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [IntegerInputFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateInteger(
+                      v,
+                      min: 0,
+                      isRequired: false,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['no_of_compound_house'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'No of Compound House',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [IntegerInputFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateInteger(
+                      v,
+                      min: 0,
+                      isRequired: false,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['compound_name'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Compound Name',
+                    ),
                   ),
                 ],
               ),
@@ -723,24 +667,6 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   ) {
     final List<Map<String, dynamic>> rawOptions = _getOptions(dataKey);
 
-    // If options are not loaded yet, return dropdown with null value
-    if (rawOptions.isEmpty) {
-      return DropdownButtonFormField<String>(
-        decoration: _decoration.copyWith(labelText: label),
-        value: null, // Always null when options are empty
-        isExpanded: true,
-        hint: const Text('Loading...', style: TextStyle(color: Colors.grey)),
-        items: const [
-          DropdownMenuItem<String>(
-            value: null,
-            enabled: false,
-            child: Text('Loading options...'),
-          ),
-        ],
-        onChanged: null,
-      );
-    }
-
     // Deduplicate options by ID to prevent Flutter assertion errors
     final Map<String, Map<String, dynamic>> uniqueOptionsMap = {};
     for (final Map<String, dynamic> o in rawOptions) {
@@ -762,76 +688,45 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         ? valueStr
         : null;
 
-    // Create items list ensuring no duplicates
-    final List<DropdownMenuItem<String>> items = options.map((o) {
-      final String itemValue = (o['id'] ?? o['value']).toString();
-      return DropdownMenuItem<String>(
-        value: itemValue,
-        child: Text(
-          o['label']?.toString() ?? 'Item',
-          overflow: TextOverflow.ellipsis,
-        ),
-      );
-    }).toList();
-
-    // Verify no duplicate values in items
-    final Set<String> itemValues = items
-        .map((item) => item.value ?? '')
-        .toSet();
-    if (itemValues.length != items.length) {
-      // If duplicates found, filter them out
-      final Map<String, DropdownMenuItem<String>> uniqueItems = {};
-      for (final item in items) {
-        if (item.value != null && !uniqueItems.containsKey(item.value)) {
-          uniqueItems[item.value!] = item;
-        }
-      }
-      final List<DropdownMenuItem<String>> deduplicatedItems = uniqueItems
-          .values
-          .toList();
-
-      // Re-validate value against deduplicated items
-      final String? finalValue =
-          (valueStr != null &&
-              valueStr.isNotEmpty &&
-              uniqueItems.containsKey(valueStr))
-          ? valueStr
-          : null;
-
-      return DropdownButtonFormField<String>(
-        decoration: _decoration.copyWith(labelText: label),
-        value: finalValue,
-        isExpanded: true,
-        selectedItemBuilder: (BuildContext context) {
-          return deduplicatedItems.map<Widget>((item) {
-            return Text(
-              item.child is Text ? (item.child as Text).data ?? '' : '',
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 16),
-            );
-          }).toList();
-        },
-        items: deduplicatedItems,
-        onChanged: onChanged,
-      );
-    }
-
-    return DropdownButtonFormField<String>(
-      decoration: _decoration.copyWith(labelText: label),
-      value: validValue,
-      isExpanded: true,
-      selectedItemBuilder: (BuildContext context) {
-        return options.map<Widget>((Map<String, dynamic> o) {
-          final String text = o['label']?.toString() ?? 'Item';
-          return Text(
-            text,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 16),
-          );
-        }).toList();
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        if (options.isEmpty) return [];
+        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
       },
-      items: items,
-      onChanged: onChanged,
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(
+          labelText: label,
+          hintText: options.isEmpty ? 'Loading...' : null,
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = options.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      enabled: options.isNotEmpty,
+      selectedItem: options.isEmpty ? null : validValue,
+      compareFn: (item1, item2) => item1 == item2,
+      onChanged: options.isEmpty ? null : onChanged,
     );
   }
 

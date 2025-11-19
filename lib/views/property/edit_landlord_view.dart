@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
@@ -36,21 +37,25 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   bool _loadingVars = false;
   bool _isSubmitting = false;
 
-  Map<String, dynamic> get _landlord =>
-      Map<String, dynamic>.from(
-          (widget.property['landlord'] ?? {}) as Map? ?? {});
+  Map<String, dynamic> get _landlord => Map<String, dynamic>.from(
+    (widget.property['landlord'] ?? {}) as Map? ?? {},
+  );
 
   @override
   void initState() {
     super.initState();
-    _isOrganization = (widget.property['is_organization'] == true ||
-        widget.property['is_organization'] == 1) ? '1' : '0';
+    _isOrganization =
+        (widget.property['is_organization'] == true ||
+            widget.property['is_organization'] == 1)
+        ? '1'
+        : '0';
     _initializeForm();
     _loadVariables();
   }
 
   void _initializeForm() {
-    _ownerTitleId = _landlord['ownerTitle']?.toString() ??
+    _ownerTitleId =
+        _landlord['ownerTitle']?.toString() ??
         _landlord['ownerTitle_id']?.toString();
     _sex = _landlord['sex']?.toString() ?? 'm';
     _ward = _landlord['ward']?.toString();
@@ -60,35 +65,51 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     _district = _landlord['district']?.toString();
     _province = _landlord['province']?.toString();
 
-    _controllers['first_name'] =
-        TextEditingController(text: _landlord['first_name']?.toString() ?? '');
-    _controllers['middle_name'] =
-        TextEditingController(text: _landlord['middle_name']?.toString() ?? '');
-    _controllers['surname'] =
-        TextEditingController(text: _landlord['surname']?.toString() ?? '');
-    _controllers['email'] =
-        TextEditingController(text: _landlord['email']?.toString() ?? '');
-    _controllers['id_type'] =
-        TextEditingController(text: _landlord['id_type']?.toString() ?? '');
-    _controllers['id_number'] =
-        TextEditingController(text: _landlord['id_number']?.toString() ?? '');
-    _controllers['street_number'] =
-        TextEditingController(text: _landlord['street_number']?.toString() ?? '');
-    _controllers['street_name'] =
-        TextEditingController(text: _landlord['street_name']?.toString() ?? '');
-    _controllers['postcode'] =
-        TextEditingController(text: _landlord['postcode']?.toString() ?? '');
-    _controllers['mobile_1'] =
-        TextEditingController(text: _landlord['mobile_1']?.toString() ?? 
-            _landlord['phone_number']?.toString() ?? '');
-    _controllers['mobile_2'] =
-        TextEditingController(text: _landlord['mobile_2']?.toString() ?? '');
-    _controllers['organization_name'] =
-        TextEditingController(text: widget.property['organization_name']?.toString() ?? '');
-    _controllers['organization_addresss'] =
-        TextEditingController(text: widget.property['organization_addresss']?.toString() ?? '');
-    _controllers['organization_type'] =
-        TextEditingController(text: widget.property['organization_type']?.toString() ?? '');
+    _controllers['first_name'] = TextEditingController(
+      text: _landlord['first_name']?.toString() ?? '',
+    );
+    _controllers['middle_name'] = TextEditingController(
+      text: _landlord['middle_name']?.toString() ?? '',
+    );
+    _controllers['surname'] = TextEditingController(
+      text: _landlord['surname']?.toString() ?? '',
+    );
+    _controllers['email'] = TextEditingController(
+      text: _landlord['email']?.toString() ?? '',
+    );
+    _controllers['id_type'] = TextEditingController(
+      text: _landlord['id_type']?.toString() ?? '',
+    );
+    _controllers['id_number'] = TextEditingController(
+      text: _landlord['id_number']?.toString() ?? '',
+    );
+    _controllers['street_number'] = TextEditingController(
+      text: _landlord['street_number']?.toString() ?? '',
+    );
+    _controllers['street_name'] = TextEditingController(
+      text: _landlord['street_name']?.toString() ?? '',
+    );
+    _controllers['postcode'] = TextEditingController(
+      text: _landlord['postcode']?.toString() ?? '',
+    );
+    _controllers['mobile_1'] = TextEditingController(
+      text:
+          _landlord['mobile_1']?.toString() ??
+          _landlord['phone_number']?.toString() ??
+          '',
+    );
+    _controllers['mobile_2'] = TextEditingController(
+      text: _landlord['mobile_2']?.toString() ?? '',
+    );
+    _controllers['organization_name'] = TextEditingController(
+      text: widget.property['organization_name']?.toString() ?? '',
+    );
+    _controllers['organization_addresss'] = TextEditingController(
+      text: widget.property['organization_addresss']?.toString() ?? '',
+    );
+    _controllers['organization_type'] = TextEditingController(
+      text: widget.property['organization_type']?.toString() ?? '',
+    );
   }
 
   @override
@@ -144,7 +165,8 @@ class _EditLandlordViewState extends State<EditLandlordView> {
         'is_organization': _isOrganization,
         'organization_name': _controllers['organization_name']!.text.trim(),
         'organization_type': _controllers['organization_type']!.text.trim(),
-        'organization_addresss': _controllers['organization_addresss']!.text.trim(),
+        'organization_addresss': _controllers['organization_addresss']!.text
+            .trim(),
       };
 
       if (_ownerTitleId != null) {
@@ -154,7 +176,7 @@ class _EditLandlordViewState extends State<EditLandlordView> {
       await _propertyService.updateLandlord(payload: payload);
 
       ToastService.showSuccess('Landlord information updated successfully');
-      
+
       Get.offAllNamed(Routes.propertyList);
     } catch (e) {
       ToastService.showError('Failed to update landlord: $e');
@@ -170,307 +192,302 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Landlord')),
       body: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _SectionCard(
-                      title: 'Type',
-                      children: [
-                        Row(
-                          children: [
-                            const Text('Is Organization'),
-                            const SizedBox(width: 12),
-                            Row(
-                              children: [
-                                Radio<String>(
-                                  value: '0',
-                                  groupValue: _isOrganization,
-                                  onChanged: (v) =>
-                                      setState(() => _isOrganization = v ?? '0'),
-                                ),
-                                const Text('No'),
-                                const SizedBox(width: 8),
-                                Radio<String>(
-                                  value: '1',
-                                  groupValue: _isOrganization,
-                                  onChanged: (v) =>
-                                      setState(() => _isOrganization = v ?? '1'),
-                                ),
-                                const Text('Yes'),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (_isOrganization == '0') ...[
-                      _SectionCard(
-                        title: 'Personal Information',
+        key: _formKey,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SectionCard(
+                title: 'Type',
+                children: [
+                  Row(
+                    children: [
+                      const Text('Is Organization'),
+                      const SizedBox(width: 12),
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildTitleSelect(),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child:                           TextFormField(
-                            controller: _controllers['first_name'],
-                            decoration: _decoration.copyWith(
-                              labelText: 'First Name*',
-                            ),
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'First Name'),
+                          Radio<String>(
+                            value: '0',
+                            groupValue: _isOrganization,
+                            onChanged: (v) =>
+                                setState(() => _isOrganization = v ?? '0'),
                           ),
-                              ),
-                            ],
+                          const Text('No'),
+                          const SizedBox(width: 8),
+                          Radio<String>(
+                            value: '1',
+                            groupValue: _isOrganization,
+                            onChanged: (v) =>
+                                setState(() => _isOrganization = v ?? '1'),
                           ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _controllers['middle_name'],
-                            decoration: _decoration.copyWith(
-                              labelText: 'Middle Name',
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _controllers['surname'],
-                            decoration: _decoration.copyWith(labelText: 'Surname*'),
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Surname'),
-                          ),
-                          const SizedBox(height: 12),
-                          DropdownButtonFormField<String>(
-                            decoration: _decoration.copyWith(labelText: 'Gender'),
-                            items: const [
-                              DropdownMenuItem(value: 'm', child: Text('Male')),
-                              DropdownMenuItem(value: 'f', child: Text('Female')),
-                            ],
-                            isExpanded: true,
-                            value: _sex,
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Gender'),
-                            onChanged: (v) => setState(() => _sex = v),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _controllers['id_type'],
-                                  decoration: _decoration.copyWith(
-                                    labelText: 'Id type',
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _controllers['id_number'],
-                                  decoration: _decoration.copyWith(
-                                    labelText: 'Id number',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      _SectionCard(
-                        title: 'Organization Information',
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _controllers['organization_name'],
-                                  decoration: _decoration.copyWith(
-                                    labelText: 'Organization Name',
-                                  ),
-                                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Name'),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _controllers['organization_addresss'],
-                                  decoration: _decoration.copyWith(
-                                    labelText: 'Organization Address',
-                                  ),
-                                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  validator: (v) => ValidationUtils.validateRequired(v, fieldName: 'Organization Name'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _controllers['organization_type'],
-                            decoration: _decoration.copyWith(
-                              labelText: 'Organization Type',
-                            ),
-                            autovalidateMode: AutovalidateMode.onUserInteraction,
-                            validator: (v) =>
-                                (v == null || v.trim().isEmpty) ? 'Required' : null,
-                          ),
+                          const Text('Yes'),
                         ],
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Contact',
-                      children: [
-                        TextFormField(
-                          controller: _controllers['email'],
-                          decoration: _decoration.copyWith(
-                            labelText: 'Email Address',
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          autovalidateMode: AutovalidateMode.onUserInteraction,
-                          validator: ValidationUtils.validateEmail,
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['mobile_1'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Mobile 1*',
-                                ),
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [PhoneNumberFormatter()],
-                                autovalidateMode: AutovalidateMode.onUserInteraction,
-                                validator: (v) => ValidationUtils.validatePhone(v, isRequired: true),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: TextFormField(
-                                  controller: _controllers['mobile_2'],
-                                  decoration: _decoration.copyWith(
-                                    labelText: 'Mobile 2',
-                                  ),
-                                  keyboardType: TextInputType.phone,
-                                  inputFormatters: [PhoneNumberFormatter()],
-                                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                                  validator: (v) => ValidationUtils.validatePhone(v, isRequired: false),
-                                ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Address',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['street_number'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Street No',
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['street_name'],
-                                decoration: _decoration.copyWith(
-                                  labelText: 'Street Name',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _controllers['postcode'],
-                                decoration: _decoration.copyWith(labelText: 'Postcode'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(child: SizedBox.shrink()),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _SectionCard(
-                      title: 'Administrative',
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: _buildAdminSelect('wards', 'Ward', true, (v) => setState(() => _ward = v), _ward)),
-                            const SizedBox(width: 12),
-                            Expanded(child: _buildAdminSelect('constituencies', 'Constituency', true, (v) => setState(() => _constituency = v), _constituency)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(child: _buildAdminSelect('sections', 'Section', true, (v) => setState(() => _section = v), _section)),
-                            const SizedBox(width: 12),
-                            Expanded(child: _buildAdminSelect('chiefdoms', 'Chiefdom', true, (v) => setState(() => _chiefdom = v), _chiefdom)),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(child: _buildAdminSelect('districts', 'District', true, (v) => setState(() => _district = v), _district)),
-                            const SizedBox(width: 12),
-                            Expanded(child: _buildAdminSelect('provinces', 'Province', true, (v) => setState(() => _province = v), _province)),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _isSubmitting ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                            : const Text('Update Landlord'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (_isOrganization == '0') ...[
+                _SectionCard(
+                  title: 'Personal Information',
+                  children: [
+                    _buildTitleSelect(),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['first_name'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'First Name*',
                       ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'First Name',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['middle_name'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'Middle Name',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['surname'],
+                      decoration: _decoration.copyWith(labelText: 'Surname*'),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Surname',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownSearch<String>(
+                      items: (filter, infiniteScrollProps) => const [
+                        'Male',
+                        'Female',
+                      ],
+                      decoratorProps: DropDownDecoratorProps(
+                        decoration: _decoration.copyWith(labelText: 'Gender'),
+                      ),
+                      popupProps: const PopupProps.menu(
+                        showSearchBox: true,
+                        searchFieldProps: TextFieldProps(
+                          decoration: InputDecoration(
+                            hintText: 'Search gender...',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      selectedItem: _sex == 'm'
+                          ? 'Male'
+                          : (_sex == 'f' ? 'Female' : null),
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Gender',
+                      ),
+                      onChanged: (v) =>
+                          setState(() => _sex = v == 'Male' ? 'm' : 'f'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['id_type'],
+                      decoration: _decoration.copyWith(labelText: 'Id type'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['id_number'],
+                      decoration: _decoration.copyWith(labelText: 'Id number'),
                     ),
                   ],
                 ),
+              ] else ...[
+                _SectionCard(
+                  title: 'Organization Information',
+                  children: [
+                    TextFormField(
+                      controller: _controllers['organization_name'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'Organization Name',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Organization Name',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['organization_addresss'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'Organization Address',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Organization Address',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _controllers['organization_type'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'Organization Type',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Contact',
+                children: [
+                  TextFormField(
+                    controller: _controllers['email'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Email Address',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: ValidationUtils.validateEmail,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['mobile_1'],
+                    decoration: _decoration.copyWith(labelText: 'Mobile 1*'),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: true),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['mobile_2'],
+                    decoration: _decoration.copyWith(labelText: 'Mobile 2'),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [PhoneNumberFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) =>
+                        ValidationUtils.validatePhone(v, isRequired: false),
+                  ),
+                ],
               ),
-            ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Address',
+                children: [
+                  TextFormField(
+                    controller: _controllers['street_number'],
+                    decoration: _decoration.copyWith(labelText: 'Street No'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['street_name'],
+                    decoration: _decoration.copyWith(labelText: 'Street Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _controllers['postcode'],
+                    decoration: _decoration.copyWith(labelText: 'Postcode'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _SectionCard(
+                title: 'Administrative',
+                children: [
+                  _buildAdminSelect(
+                    'wards',
+                    'Ward',
+                    true,
+                    (v) => setState(() => _ward = v),
+                    _ward,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'constituencies',
+                    'Constituency',
+                    true,
+                    (v) => setState(() => _constituency = v),
+                    _constituency,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'sections',
+                    'Section',
+                    true,
+                    (v) => setState(() => _section = v),
+                    _section,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'chiefdoms',
+                    'Chiefdom',
+                    true,
+                    (v) => setState(() => _chiefdom = v),
+                    _chiefdom,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'districts',
+                    'District',
+                    true,
+                    (v) => setState(() => _district = v),
+                    _district,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildAdminSelect(
+                    'provinces',
+                    'Province',
+                    true,
+                    (v) => setState(() => _province = v),
+                    _province,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSubmitting ? null : _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Text('Update Landlord'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildTitleSelect() {
     final List<Map<String, dynamic>> rawOptions = _getTitleOptions();
-    
+
     // Deduplicate options by ID to prevent duplicate values
     final Map<String, Map<String, dynamic>> uniqueOptions = {};
     for (final option in rawOptions) {
@@ -480,46 +497,55 @@ class _EditLandlordViewState extends State<EditLandlordView> {
       }
     }
     final List<Map<String, dynamic>> options = uniqueOptions.values.toList();
-    
+
     // Only set value if it exists in the options
     final String? selectedValue = options.isEmpty
         ? null
-        : (_ownerTitleId != null && 
-           options.any((o) => (o['id'] ?? o['value']).toString() == _ownerTitleId))
-            ? _ownerTitleId
-            : null;
-    
-    return DropdownButtonFormField<String>(
-      decoration: _decoration.copyWith(labelText: 'Title'),
-      value: selectedValue,
-      isExpanded: true,
-      hint: options.isEmpty
-          ? const Text('Loading...', style: TextStyle(color: Colors.grey))
-          : null,
-      selectedItemBuilder: options.isEmpty
-          ? null
-          : (context) => [
-              for (final Map<String, dynamic> o in options)
-                Text(
-                  o['label']?.toString() ?? 'Item',
-                  overflow: TextOverflow.ellipsis,
-                ),
-            ],
-      items: options.isEmpty
-          ? [
-              const DropdownMenuItem<String>(
-                value: null,
-                enabled: false,
-                child: Text('Loading options...'),
+        : (_ownerTitleId != null &&
+              options.any(
+                (o) => (o['id'] ?? o['value']).toString() == _ownerTitleId,
+              ))
+        ? _ownerTitleId
+        : null;
+
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        if (options.isEmpty) return [];
+        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(
+          labelText: 'Title',
+          hintText: options.isEmpty ? 'Loading...' : null,
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = options.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-            ]
-          : [
-              for (final Map<String, dynamic> o in options)
-                DropdownMenuItem<String>(
-                  value: (o['id'] ?? o['value']).toString(),
-                  child: Text(o['label']?.toString() ?? 'Item'),
-                ),
-            ],
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      enabled: options.isNotEmpty,
+      selectedItem: selectedValue,
+      compareFn: (item1, item2) => item1 == item2,
       onChanged: options.isEmpty
           ? null
           : (v) {
@@ -530,9 +556,15 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     );
   }
 
-  Widget _buildAdminSelect(String dataKey, String label, bool required, Function(String?) onChanged, String? value) {
+  Widget _buildAdminSelect(
+    String dataKey,
+    String label,
+    bool required,
+    Function(String?) onChanged,
+    String? value,
+  ) {
     final List<Map<String, dynamic>> rawOptions = _getAdminOptions(dataKey);
-    
+
     // Deduplicate options by ID to prevent duplicate values
     final Map<String, Map<String, dynamic>> uniqueOptions = {};
     for (final option in rawOptions) {
@@ -542,57 +574,73 @@ class _EditLandlordViewState extends State<EditLandlordView> {
       }
     }
     final List<Map<String, dynamic>> options = uniqueOptions.values.toList();
-    
+
     // Only set value if it exists in the options
     final String? selectedValue = options.isEmpty
         ? null
-        : (value != null && 
-           options.any((o) => (o['id'] ?? o['value']).toString() == value))
-            ? value
-            : null;
-    
-    return DropdownButtonFormField<String>(
-      decoration: _decoration.copyWith(labelText: label),
-      value: selectedValue,
-      isExpanded: true,
-      hint: options.isEmpty
-          ? const Text('Loading...', style: TextStyle(color: Colors.grey))
-          : null,
-      selectedItemBuilder: options.isEmpty
-          ? null
-          : (context) => [
-              for (final Map<String, dynamic> o in options)
-                Text(
-                  o['label']?.toString() ?? 'Item',
-                  overflow: TextOverflow.ellipsis,
-                ),
-            ],
-      items: options.isEmpty
-          ? [
-              const DropdownMenuItem<String>(
-                value: null,
-                enabled: false,
-                child: Text('Loading options...'),
+        : (value != null &&
+              options.any((o) => (o['id'] ?? o['value']).toString() == value))
+        ? value
+        : null;
+
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        if (options.isEmpty) return [];
+        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(
+          labelText: label,
+          hintText: options.isEmpty ? 'Loading...' : null,
+        ),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          final option = options.firstWhere(
+            (o) => (o['id'] ?? o['value']).toString() == item,
+            orElse: () => {'label': item},
+          );
+          return ListTile(
+            title: Text(
+              option['label']?.toString() ?? 'Item',
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-            ]
-          : [
-              for (final Map<String, dynamic> o in options)
-                DropdownMenuItem<String>(
-                  value: (o['id'] ?? o['value']).toString(),
-                  child: Text(o['label']?.toString() ?? 'Item'),
-                ),
-            ],
-      autovalidateMode: AutovalidateMode.onUserInteraction,
-      validator: required ? (v) => v == null ? 'Required' : null : null,
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      enabled: options.isNotEmpty,
+      selectedItem: selectedValue,
+      compareFn: (item1, item2) => item1 == item2,
+      validator: required
+          ? (v) => (v == null || v.isEmpty) ? 'Required' : null
+          : null,
       onChanged: options.isEmpty ? null : onChanged,
     );
   }
 
   List<Map<String, dynamic>> _getTitleOptions() {
-    if (_variables == null) return const [{'id': '1', 'label': 'Mr.'}, {'id': '2', 'label': 'Ms.'}];
+    if (_variables == null)
+      return const [
+        {'id': '1', 'label': 'Mr.'},
+        {'id': '2', 'label': 'Ms.'},
+      ];
     final data = _variables!['data'] as Map<String, dynamic>?;
-    if (data == null) return const [{'id': '1', 'label': 'Mr.'}, {'id': '2', 'label': 'Ms.'}];
-    
+    if (data == null)
+      return const [
+        {'id': '1', 'label': 'Mr.'},
+        {'id': '2', 'label': 'Ms.'},
+      ];
+
     final allTitles = data['all_titles'] as List?;
     if (allTitles != null && allTitles.isNotEmpty) {
       return allTitles
@@ -601,14 +649,17 @@ class _EditLandlordViewState extends State<EditLandlordView> {
           .where((e) => e['is_active'] == null || e['is_active'] == 1)
           .toList();
     }
-    return const [{'id': '1', 'label': 'Mr.'}, {'id': '2', 'label': 'Ms.'}];
+    return const [
+      {'id': '1', 'label': 'Mr.'},
+      {'id': '2', 'label': 'Ms.'},
+    ];
   }
 
   List<Map<String, dynamic>> _getAdminOptions(String dataKey) {
     if (_variables == null) return const [];
     final data = _variables!['data'] as Map<String, dynamic>?;
     if (data == null) return const [];
-    
+
     final Map<String, String> apiKeyMap = {
       'wards': 'ward',
       'constituencies': 'constituency',
@@ -617,32 +668,31 @@ class _EditLandlordViewState extends State<EditLandlordView> {
       'districts': 'district',
       'provinces': 'province',
     };
-    
+
     final String apiKey = apiKeyMap[dataKey] ?? dataKey;
     final raw = data[apiKey];
-    
+
     if (raw is Map) {
       return raw.entries
-          .map<Map<String, dynamic>>((e) => {
-                'id': e.key.toString(),
-                'label': e.value.toString(),
-              })
+          .map<Map<String, dynamic>>(
+            (e) => {'id': e.key.toString(), 'label': e.value.toString()},
+          )
           .toList();
     }
     return const [];
   }
 
   InputDecoration get _decoration => const InputDecoration(
-        border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.green, width: 2),
-        ),
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      );
+    border: OutlineInputBorder(borderSide: BorderSide(color: Colors.green)),
+    enabledBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderSide: BorderSide(color: Colors.green, width: 2),
+    ),
+    isDense: true,
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+  );
 }
 
 class _SectionCard extends StatelessWidget {
@@ -679,4 +729,3 @@ class _SectionCard extends StatelessWidget {
     );
   }
 }
-
