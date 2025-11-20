@@ -48,6 +48,14 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   bool _loadingVars = false;
   bool _isSubmitting = false;
 
+  bool get _shouldShowMastsField => _selectedValueAdded.contains(8);
+  bool get _shouldShowShopsField => _selectedValueAdded.contains(9);
+  bool get _shouldShowCompoundFields => _gatedCommunity == '1';
+  bool get _shouldShowAdditionalInfoSection =>
+      _shouldShowMastsField ||
+      _shouldShowShopsField ||
+      _shouldShowCompoundFields;
+
   Map<String, dynamic> get _assessmentsObject {
     final List<dynamic>? assessments =
         widget.property['assessments_object'] as List?;
@@ -468,58 +476,75 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                 ],
               ),
               const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Additional Information',
-                children: [
-                  TextFormField(
-                    controller: _controllers['no_of_mast'],
-                    decoration: _decoration.copyWith(labelText: 'No of Masts'),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [IntegerInputFormatter()],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) => ValidationUtils.validateInteger(
-                      v,
-                      min: 0,
-                      isRequired: false,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['no_of_shop'],
-                    decoration: _decoration.copyWith(labelText: 'No of Shops'),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [IntegerInputFormatter()],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) => ValidationUtils.validateInteger(
-                      v,
-                      min: 0,
-                      isRequired: false,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['no_of_compound_house'],
-                    decoration: _decoration.copyWith(
-                      labelText: 'No of Compound House',
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [IntegerInputFormatter()],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) => ValidationUtils.validateInteger(
-                      v,
-                      min: 0,
-                      isRequired: false,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['compound_name'],
-                    decoration: _decoration.copyWith(
-                      labelText: 'Compound Name',
-                    ),
-                  ),
-                ],
-              ),
+              if (_shouldShowAdditionalInfoSection)
+                _SectionCard(
+                  title: 'Additional Information',
+                  children: [
+                    if (_shouldShowMastsField)
+                      TextFormField(
+                        controller: _controllers['no_of_mast'],
+                        decoration: _decoration.copyWith(
+                          labelText: 'No of Masts',
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [IntegerInputFormatter()],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (v) => ValidationUtils.validateInteger(
+                          v,
+                          min: 0,
+                          isRequired: false,
+                        ),
+                      ),
+                    if (_shouldShowMastsField &&
+                        (_shouldShowShopsField || _shouldShowCompoundFields))
+                      const SizedBox(height: 12),
+                    if (_shouldShowShopsField)
+                      TextFormField(
+                        controller: _controllers['no_of_shop'],
+                        decoration: _decoration.copyWith(
+                          labelText: 'No of Shops',
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [IntegerInputFormatter()],
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (v) => ValidationUtils.validateInteger(
+                          v,
+                          min: 0,
+                          isRequired: false,
+                        ),
+                      ),
+                    if (_shouldShowShopsField && _shouldShowCompoundFields)
+                      const SizedBox(height: 12),
+                    if (_shouldShowCompoundFields)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextFormField(
+                            controller: _controllers['no_of_compound_house'],
+                            decoration: _decoration.copyWith(
+                              labelText: 'No of Compound House',
+                            ),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [IntegerInputFormatter()],
+                            autovalidateMode:
+                                AutovalidateMode.onUserInteraction,
+                            validator: (v) => ValidationUtils.validateInteger(
+                              v,
+                              min: 0,
+                              isRequired: false,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _controllers['compound_name'],
+                            decoration: _decoration.copyWith(
+                              labelText: 'Compound Name',
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               const SizedBox(height: 16),
               _SectionCard(
                 title: 'Property Images',
