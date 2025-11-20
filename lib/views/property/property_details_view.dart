@@ -382,9 +382,39 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     return ids.isEmpty ? '[]' : ids.toString();
   }
 
-  Map<String, dynamic> get _occupancy =>
-      Map<String, dynamic>.from((prop['occupancy'] ?? {}) as Map? ?? {});
-  List<dynamic> get _occupancies => (prop['occupancies'] as List?) ?? const [];
+  Map<String, dynamic> get _occupancy {
+    final dynamic data = prop['data'];
+    final List<dynamic> candidates = <dynamic>[
+      prop['occupancy'],
+      if (data is Map) data['occupancy'],
+      if (data is Map) (data['property'] as Map?)?['occupancy'],
+    ];
+
+    for (final dynamic candidate in candidates) {
+      if (candidate is Map && candidate.isNotEmpty) {
+        return Map<String, dynamic>.from(candidate);
+      }
+    }
+
+    return <String, dynamic>{};
+  }
+
+  List<dynamic> get _occupancies {
+    final dynamic direct = prop['occupancies'];
+    if (direct is List && direct.isNotEmpty) return direct;
+
+    final dynamic data = prop['data'];
+    if (data is Map) {
+      final dynamic dataLevel = data['occupancies'];
+      if (dataLevel is List && dataLevel.isNotEmpty) return dataLevel;
+
+      final dynamic nested = (data['property'] as Map?)?['occupancies'];
+      if (nested is List && nested.isNotEmpty) return nested;
+    }
+
+    return const [];
+  }
+
   List<dynamic> get _propertyInaccessible =>
       (prop['property_inaccessible'] as List?) ?? const [];
   List<dynamic> get _registryMeters =>
