@@ -352,7 +352,8 @@ class _PaymentSearchViewState extends State<PaymentSearchView> {
         (allAssessments.isNotEmpty
             ? allAssessments.first as Map<String, dynamic>?
             : null);
-    final amountPaid = (result['amountPaid'] as num?)?.toDouble() ?? 0.0;
+    final amountPaid =
+        (propertyAssessment?['amount_paid'] as num?)?.toDouble() ?? 0.0;
 
     // Extract assessment data - check multiple possible locations
     Map<String, dynamic>? currentAssessment;
@@ -770,15 +771,6 @@ class _PropertyDetailsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Payment Form',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
           _DetailRow(
             label: '2025 Assessment',
             value: _formatCurrency(assessedValue2025),
