@@ -7,7 +7,7 @@ class ApiConfig {
   ApiConfig._();
 
   /// Environment type
-  static Environment _environment = Environment.development;
+  static Environment _environment = Environment.production;
 
   /// Get current environment
   static Environment get environment => _environment;

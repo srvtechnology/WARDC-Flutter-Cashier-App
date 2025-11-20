@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -181,14 +183,203 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
       Map<String, dynamic>.from((prop['landlord'] ?? {}) as Map? ?? {});
   Map<String, dynamic> get _geo =>
       Map<String, dynamic>.from((prop['geo_registry'] ?? {}) as Map? ?? {});
-  Map<String, dynamic> get _assessmentsObject {
-    // Try both 'assessments' and 'assessments_object' keys
-    final List<dynamic>? assessments =
-        (prop['assessments'] as List?) ?? (prop['assessments_object'] as List?);
-    if (assessments != null && assessments.isNotEmpty) {
-      return Map<String, dynamic>.from((assessments[0] as Map? ?? {}));
+  Map<String, dynamic>? _parseAssessment(dynamic source) {
+    if (source is List) {
+      for (final dynamic item in source) {
+        if (item is Map && item.isNotEmpty) {
+          return Map<String, dynamic>.from(item);
+        }
+      }
+    } else if (source is Map && source.isNotEmpty) {
+      return Map<String, dynamic>.from(source);
     }
-    return {};
+    return null;
+  }
+
+  bool _hasAssessmentCollections(Map<String, dynamic> data) {
+    bool hasList(dynamic value) => value is List && value.isNotEmpty;
+    return hasList(data['categories']) ||
+        hasList(data['types']) ||
+        hasList(data['values_added']);
+  }
+
+  Map<String, dynamic> get _assessmentsObject {
+    Map<String, dynamic>? preferred;
+    Map<String, dynamic>? fallback;
+
+    void consider(Map<String, dynamic>? candidate) {
+      if (candidate == null || candidate.isEmpty) return;
+      fallback ??= candidate;
+      if (preferred != null) return;
+      if (_hasAssessmentCollections(candidate)) {
+        preferred = candidate;
+      }
+    }
+
+    // Prefer populated 'assessments', then 'assessments_object', then nested data
+    consider(_parseAssessment(prop['assessments']));
+    consider(_parseAssessment(prop['assessments_object']));
+
+    final dynamic data = prop['data'];
+    if (data is Map) {
+      final dynamic property = data['property'];
+      if (property is Map) {
+        consider(_parseAssessment(property['assessments']));
+        consider(_parseAssessment(property['assessments_object']));
+      }
+      consider(_parseAssessment(data['assessments']));
+      consider(_parseAssessment(data['assessments_object']));
+    }
+
+    return preferred ?? fallback ?? <String, dynamic>{};
+  }
+
+  List<Map<String, dynamic>> _listOfMaps(dynamic source) {
+    final List<dynamic> list = _extractList(source);
+    return list
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  List<Map<String, dynamic>> _assessmentList(String key) {
+    List<Map<String, dynamic>> items = _listOfMaps(_assessmentsObject[key]);
+    if (items.isNotEmpty) return items;
+
+    items = _listOfMaps(prop[key]);
+    if (items.isNotEmpty) return items;
+
+    final dynamic data = prop['data'];
+    if (data is Map) {
+      final dynamic property = data['property'];
+      if (property is Map) {
+        items = _listOfMaps(property[key]);
+        if (items.isNotEmpty) return items;
+      }
+      items = _listOfMaps(data[key]);
+      if (items.isNotEmpty) return items;
+    }
+
+    return <Map<String, dynamic>>[];
+  }
+
+  String _labelFromItem(Map<String, dynamic> item, List<String> preferredKeys) {
+    for (final String key in preferredKeys) {
+      final dynamic raw = item[key];
+      if (raw is String && raw.trim().isNotEmpty) {
+        return raw.trim();
+      }
+    }
+    for (final dynamic value in item.values) {
+      if (value is String && value.trim().isNotEmpty) {
+        return value.trim();
+      }
+    }
+    return '';
+  }
+
+  String _joinedLabels(String key, List<String> preferredKeys) {
+    final List<Map<String, dynamic>> items = _assessmentList(key);
+    if (items.isEmpty) return '—';
+    final List<String> labels = items
+        .map((item) => _labelFromItem(item, preferredKeys))
+        .where((label) => label.isNotEmpty)
+        .toList();
+    return labels.isEmpty ? '—' : labels.join(', ');
+  }
+
+  List<dynamic> _extractList(dynamic source) {
+    if (source is List) {
+      return List<dynamic>.from(source);
+    }
+
+    if (source is String) {
+      final String trimmed = source.trim();
+      if (trimmed.isEmpty) return <dynamic>[];
+      if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        try {
+          final dynamic decoded = jsonDecode(trimmed);
+          if (decoded is List) {
+            return List<dynamic>.from(decoded);
+          }
+        } catch (_) {
+          // ignore invalid json
+        }
+      }
+      return <dynamic>[trimmed];
+    }
+
+    if (source == null) return <dynamic>[];
+    return <dynamic>[source];
+  }
+
+  List<dynamic> _extractIds(dynamic source) {
+    final List<dynamic> list = _extractList(source);
+    final List<dynamic> ids = <dynamic>[];
+    for (final dynamic item in list) {
+      if (item == null) continue;
+      if (item is Map) {
+        final dynamic id = item['id'];
+        if (id != null) ids.add(id);
+      } else {
+        ids.add(item);
+      }
+    }
+    return ids;
+  }
+
+  List<dynamic> _assessmentIds(String key) {
+    List<dynamic> ids = _extractIds(_assessmentsObject[key]);
+    if (ids.isNotEmpty) return ids;
+
+    ids = _extractIds(prop[key]);
+    if (ids.isNotEmpty) return ids;
+
+    final dynamic data = prop['data'];
+    if (data is Map) {
+      final dynamic property = data['property'];
+      if (property is Map) {
+        ids = _extractIds(property[key]);
+        if (ids.isNotEmpty) return ids;
+      }
+      ids = _extractIds(data[key]);
+      if (ids.isNotEmpty) return ids;
+    }
+
+    return <dynamic>[];
+  }
+
+  String _labelsFromListOrIds({
+    required String listKey,
+    required List<String> preferredKeys,
+    String? fallbackIdsKey,
+    String? fallbackVariablesKey,
+  }) {
+    final String labels = _joinedLabels(listKey, preferredKeys);
+    if (labels != '—') return labels;
+
+    if (fallbackIdsKey != null && fallbackVariablesKey != null) {
+      final List<dynamic> ids = _assessmentIds(fallbackIdsKey);
+      if (ids.isNotEmpty) {
+        return _labelsFor(fallbackVariablesKey, ids);
+      }
+    }
+
+    return '—';
+  }
+
+  String _joinedIds(String key) {
+    final List<String> mapIds = _assessmentList(key)
+        .map((item) => item['id'])
+        .where((id) => id != null)
+        .map((id) => id.toString())
+        .toList();
+    if (mapIds.isNotEmpty) return mapIds.toString();
+
+    final List<String> ids = _assessmentIds(
+      key,
+    ).where((id) => id != null).map((id) => id.toString()).toList();
+    return ids.isEmpty ? '[]' : ids.toString();
   }
 
   Map<String, dynamic> get _occupancy =>
@@ -501,32 +692,9 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return _text(_geo['dor_lat_long']);
       // Step 5 - Assessment (mapped to create form field names)
       case 'assessment_categories_id':
-        // Get from categories array in assessments_object
-        final List<dynamic>? categories =
-            _assessmentsObject['categories'] as List?;
-        if (categories != null && categories.isNotEmpty) {
-          final ids = categories
-              .whereType<Map>()
-              .map((e) => e['id'])
-              .where((e) => e != null)
-              .map((e) => e.toString())
-              .toList();
-          return ids.isEmpty ? '[]' : ids.toString();
-        }
-        return '[]';
+        return _joinedIds('categories');
       case 'property_types':
-        // Get from types array in assessments_object
-        final List<dynamic>? types = _assessmentsObject['types'] as List?;
-        if (types != null && types.isNotEmpty) {
-          final ids = types
-              .whereType<Map>()
-              .map((e) => e['id'])
-              .where((e) => e != null)
-              .map((e) => e.toString())
-              .toList();
-          return ids.isEmpty ? '[]' : ids.toString();
-        }
-        return '[]';
+        return _joinedIds('types');
       case 'assessment_wall_materials_id':
         return _labelFor(
           'property_wall_materials',
@@ -553,19 +721,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               _assessmentsObject['breadth'],
         );
       case 'assessment_value_added_id':
-        // Get from values_added array in assessments_object
-        final List<dynamic>? valuesAdded =
-            _assessmentsObject['values_added'] as List?;
-        if (valuesAdded != null && valuesAdded.isNotEmpty) {
-          final ids = valuesAdded
-              .whereType<Map>()
-              .map((e) => e['id'])
-              .where((e) => e != null)
-              .map((e) => e.toString())
-              .toList();
-          return ids.isEmpty ? '[]' : ids.toString();
-        }
-        return '[]';
+        return _joinedIds('values_added');
       case 'assessment_use_id':
         return _labelFor('property_uses', _assessmentsObject['property_use']);
       case 'assessment_zone_id':
@@ -1180,93 +1336,30 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           ],
         );
       default:
-        // Helper to get labels for categories, types, and values_added
-        String _getCategoriesLabels() {
-          final List<dynamic>? categories =
-              _assessmentsObject['categories'] as List?;
-          if (categories == null || categories.isEmpty) return '—';
-          final labels = categories
-              .whereType<Map>()
-              .map((e) {
-                final Map<String, dynamic> m = Map<String, dynamic>.from(e);
-                final dynamic raw =
-                    m['label'] ??
-                    m['name'] ??
-                    m['title'] ??
-                    m['category'] ??
-                    m['value'];
-                if (raw is String && raw.trim().isNotEmpty) {
-                  return raw.trim();
-                }
-                // Fallback: first non-empty string value in the map
-                for (final dynamic v in m.values) {
-                  if (v is String && v.trim().isNotEmpty) {
-                    return v.trim();
-                  }
-                }
-                return '';
-              })
-              .where((e) => e.isNotEmpty)
-              .toList();
-          return labels.isEmpty ? '—' : labels.join(', ');
-        }
-
-        String _getTypesLabels() {
-          final List<dynamic>? types = _assessmentsObject['types'] as List?;
-          if (types == null || types.isEmpty) return '—';
-          final labels = types
-              .whereType<Map>()
-              .map((e) {
-                final Map<String, dynamic> m = Map<String, dynamic>.from(e);
-                final dynamic raw =
-                    m['label'] ??
-                    m['name'] ??
-                    m['title'] ??
-                    m['type'] ??
-                    m['value'];
-                if (raw is String && raw.trim().isNotEmpty) {
-                  return raw.trim();
-                }
-                for (final dynamic v in m.values) {
-                  if (v is String && v.trim().isNotEmpty) {
-                    return v.trim();
-                  }
-                }
-                return '';
-              })
-              .where((e) => e.isNotEmpty)
-              .toList();
-          return labels.isEmpty ? '—' : labels.join(', ');
-        }
-
-        String _getValuesAddedLabels() {
-          final List<dynamic>? valuesAdded =
-              _assessmentsObject['values_added'] as List?;
-          if (valuesAdded == null || valuesAdded.isEmpty) return '—';
-          final labels = valuesAdded
-              .whereType<Map>()
-              .map((e) {
-                final Map<String, dynamic> m = Map<String, dynamic>.from(e);
-                final dynamic raw =
-                    m['label'] ??
-                    m['name'] ??
-                    m['title'] ??
-                    m['value_added'] ??
-                    m['value'];
-                if (raw is String && raw.trim().isNotEmpty) {
-                  return raw.trim();
-                }
-                for (final dynamic v in m.values) {
-                  if (v is String && v.trim().isNotEmpty) {
-                    return v.trim();
-                  }
-                }
-                return '';
-              })
-              .where((e) => e.isNotEmpty)
-              .toList();
-          return labels.isEmpty ? '—' : labels.join(', ');
-        }
+        final String categoryLabels = _labelsFromListOrIds(
+          listKey: 'categories',
+          preferredKeys: const ['label', 'name', 'title', 'category', 'value'],
+          fallbackIdsKey: 'assessment_categories_id',
+          fallbackVariablesKey: 'property_categories',
+        );
+        final String typeLabels = _labelsFromListOrIds(
+          listKey: 'types',
+          preferredKeys: const ['label', 'name', 'title', 'type', 'value'],
+          fallbackIdsKey: 'property_types',
+          fallbackVariablesKey: 'property_types',
+        );
+        final String valueAddedLabels = _labelsFromListOrIds(
+          listKey: 'values_added',
+          preferredKeys: const [
+            'label',
+            'name',
+            'title',
+            'value_added',
+            'value',
+          ],
+          fallbackIdsKey: 'assessment_value_added_id',
+          fallbackVariablesKey: 'property_value_added',
+        );
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1274,8 +1367,8 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             _SectionCard(
               title: 'Summary',
               children: [
-                _KV('Property Categories', _getCategoriesLabels()),
-                _KV('Property Types', _getTypesLabels()),
+                _KV('Property Categories', categoryLabels),
+                _KV('Property Types', typeLabels),
                 _KV(
                   'Wall Material',
                   _formValue('assessment_wall_materials_id'),
@@ -1287,7 +1380,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 _KV('Window Type', _formValue('assessment_window_type_id')),
                 _KV('Length', _formValue('assessment_length')),
                 _KV('Breadth', _formValue('assessment_breadth')),
-                _KV('Value Added', _getValuesAddedLabels()),
+                _KV('Value Added', valueAddedLabels),
                 _KV('Property Use', _formValue('assessment_use_id')),
                 _KV('Property Zone', _formValue('assessment_zone_id')),
                 _KV('No of Masts', _formValue('total_mast')),
