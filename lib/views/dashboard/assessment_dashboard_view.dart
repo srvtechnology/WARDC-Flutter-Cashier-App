@@ -40,6 +40,29 @@ class AssessmentDashboardView extends StatelessWidget {
             },
             tooltip: 'Search properties',
           ),
+          // View Toggle Button
+          Obx(() {
+            final controller = Get.put(PropertyListController());
+            return IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  controller.isGridView.value
+                      ? Icons.list_rounded
+                      : Icons.grid_view_rounded,
+                  size: 22,
+                ),
+              ),
+              onPressed: controller.toggleViewMode,
+              tooltip: controller.isGridView.value
+                  ? 'Switch to List View'
+                  : 'Switch to Grid View',
+            );
+          }),
           // Profile Avatar Button
           FutureBuilder<Map<String, dynamic>>(
             future: _getUserInitials(authService),

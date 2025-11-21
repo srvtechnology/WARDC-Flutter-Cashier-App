@@ -10,6 +10,7 @@ class PropertyListController extends GetxController {
   final RxInt totalPages = 1.obs;
   final RxInt totalItems = 0.obs;
   final RxBool hasMore = true.obs;
+  final RxBool isGridView = true.obs; // Default to grid view
   final int limit = 10;
 
   @override
@@ -30,18 +31,15 @@ class PropertyListController extends GetxController {
 
     try {
       final int pageToFetch = page ?? currentPage.value;
-      final Map<String, dynamic> response =
-          await PropertyService().getPropertyListing(
-        page: pageToFetch,
-        limit: limit,
-      );
+      final Map<String, dynamic> response = await PropertyService()
+          .getPropertyListing(page: pageToFetch, limit: limit);
 
       // Log the response structure for debugging
       // removed debug response structure logging
 
       // Extract properties from response
       List<dynamic> newProperties = [];
-      
+
       // Case 1: API returns { success, property: { current_page, data: [...], ... } }
       if (response.containsKey('property')) {
         final dynamic prop = response['property'];
@@ -73,7 +71,8 @@ class PropertyListController extends GetxController {
           // If data is a map, check for common pagination keys
           if (data.containsKey('data') && data['data'] is List) {
             newProperties = List<dynamic>.from(data['data'] as List);
-          } else if (data.containsKey('properties') && data['properties'] is List) {
+          } else if (data.containsKey('properties') &&
+              data['properties'] is List) {
             newProperties = List<dynamic>.from(data['properties'] as List);
           } else if (data.containsKey('items') && data['items'] is List) {
             newProperties = List<dynamic>.from(data['items'] as List);
@@ -95,7 +94,8 @@ class PropertyListController extends GetxController {
           // If data is directly a list
           newProperties = List<dynamic>.from(data);
         }
-      } else if (response.containsKey('properties') && response['properties'] is List) {
+      } else if (response.containsKey('properties') &&
+          response['properties'] is List) {
         newProperties = List<dynamic>.from(response['properties'] as List);
       } else if (response.containsKey('data') && response['data'] is List) {
         newProperties = List<dynamic>.from(response['data'] as List);
@@ -112,11 +112,15 @@ class PropertyListController extends GetxController {
 
       // Check if there are more pages to load
       if (!response.containsKey('property')) {
-        hasMore.value = currentPage.value < totalPages.value && newProperties.length >= limit;
+        hasMore.value =
+            currentPage.value < totalPages.value &&
+            newProperties.length >= limit;
       }
 
       // If no properties found but response is successful, set empty list
-      if (properties.isEmpty && response.containsKey('success') && response['success'] == true) {
+      if (properties.isEmpty &&
+          response.containsKey('success') &&
+          response['success'] == true) {
         properties.value = [];
         hasMore.value = false;
       }
@@ -142,5 +146,8 @@ class PropertyListController extends GetxController {
       await fetchProperties(page: nextPage, append: true);
     }
   }
-}
 
+  void toggleViewMode() {
+    isGridView.value = !isGridView.value;
+  }
+}
