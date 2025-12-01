@@ -302,157 +302,142 @@ class _EditGeoViewState extends State<EditGeoView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionCard(
-                title: 'Location',
-                children: [
-                  TextFormField(
-                    controller: _dorLatLongController,
+              // Location Fields
+              TextFormField(
+                controller: _dorLatLongController,
+                decoration: _decoration.copyWith(
+                  labelText: 'Dor Lat Long',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.my_location),
+                    tooltip: 'Use current location',
+                    onPressed: () => _fetchLocationForPoint(1),
+                  ),
+                ),
+                readOnly: true,
+                inputFormatters: [CoordinateFormatter()],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: ValidationUtils.validateLatLong,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _digitalAddressController,
+                decoration: _decoration.copyWith(labelText: 'Digital Address'),
+              ),
+              const SizedBox(height: 16),
+
+              // Registry Points Grid
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 8,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 4,
+                ),
+                itemBuilder: (context, index) {
+                  final int p = index + 1;
+                  return TextFormField(
+                    controller: _pointControllers['point$p'],
                     decoration: _decoration.copyWith(
-                      labelText: 'Dor Lat Long',
+                      labelText: 'Point $p',
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.my_location),
+                        icon: const Icon(Icons.my_location, size: 20),
                         tooltip: 'Use current location',
-                        onPressed: () => _fetchLocationForPoint(1),
+                        onPressed: () => _fetchLocationForPoint(p),
                       ),
                     ),
-                    readOnly: true,
+                    keyboardType: TextInputType.text,
                     inputFormatters: [CoordinateFormatter()],
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: ValidationUtils.validateLatLong,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _digitalAddressController,
-                    decoration: _decoration.copyWith(
-                      labelText: 'Digital Address',
-                    ),
-                  ),
-                ],
+                  );
+                },
               ),
               const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Registry Points',
-                children: [
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: 8,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          childAspectRatio: 4,
-                        ),
-                    itemBuilder: (context, index) {
-                      final int p = index + 1;
-                      return TextFormField(
-                        controller: _pointControllers['point$p'],
-                        decoration: _decoration.copyWith(
-                          labelText: 'Point $p',
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.my_location, size: 20),
-                            tooltip: 'Use current location',
-                            onPressed: () => _fetchLocationForPoint(p),
-                          ),
-                        ),
-                        keyboardType: TextInputType.text,
-                        inputFormatters: [CoordinateFormatter()],
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: ValidationUtils.validateLatLong,
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Meters',
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: ElevatedButton.icon(
-                      onPressed: _addMeter,
-                      icon: const Icon(Icons.add),
-                      label: const Text('+ Add Meter'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...List.generate(_meters.length, (index) {
-                    final meter = _meters[index];
-                    final bool isExisting =
-                        meter.containsKey('id') && meter['id'] != null;
-                    final String? existingImageUrl = meter['image']?.toString();
-                    final String? imageFilePath = meter['imageFile']
-                        ?.toString();
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.green.withOpacity(0.25),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  isExisting
-                                      ? 'Meter ${index + 1} (Existing)'
-                                      : 'Meter ${index + 1} (New)',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => _removeMeter(index),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            TextFormField(
-                              initialValue: meter['number']?.toString() ?? '',
-                              decoration: _decoration.copyWith(
-                                labelText: 'Meter Number',
-                              ),
-                              onChanged: (v) => _updateMeterNumber(index, v),
-                            ),
-                            const SizedBox(height: 12),
-                            _MeterImageBox(
-                              label: 'Meter Image',
-                              imageFilePath: imageFilePath,
-                              existingImageUrl: existingImageUrl,
-                              onPick: () => _pickMeterImage(index),
-                              onRemove: () => _removeMeterImage(index),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-                ],
+              // Add Meter Button
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ElevatedButton.icon(
+                  onPressed: _addMeter,
+                  icon: const Icon(Icons.add),
+                  label: const Text('+ Add Meter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ),
+              const SizedBox(height: 12),
+
+              // Meters List
+              ...List.generate(_meters.length, (index) {
+                final meter = _meters[index];
+                final bool isExisting =
+                    meter.containsKey('id') && meter['id'] != null;
+                final String? existingImageUrl = meter['image']?.toString();
+                final String? imageFilePath = meter['imageFile']?.toString();
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.withOpacity(0.25)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              isExisting
+                                  ? 'Meter ${index + 1} (Existing)'
+                                  : 'Meter ${index + 1} (New)',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.red),
+                              onPressed: () => _removeMeter(index),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          initialValue: meter['number']?.toString() ?? '',
+                          decoration: _decoration.copyWith(
+                            labelText: 'Meter Number',
+                          ),
+                          onChanged: (v) => _updateMeterNumber(index, v),
+                        ),
+                        const SizedBox(height: 12),
+                        _MeterImageBox(
+                          label: 'Meter Image',
+                          imageFilePath: imageFilePath,
+                          existingImageUrl: existingImageUrl,
+                          onPick: () => _pickMeterImage(index),
+                          onRemove: () => _removeMeterImage(index),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -498,41 +483,6 @@ class _EditGeoViewState extends State<EditGeoView> {
     isDense: true,
     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
   );
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.children});
-  final String title;
-  final List<Widget> children;
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.withOpacity(0.25)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [...children]),
-        ),
-      ],
-    );
-  }
 }
 
 class _MeterImageBox extends StatelessWidget {

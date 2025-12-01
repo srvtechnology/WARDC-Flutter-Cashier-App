@@ -30,6 +30,9 @@ class PropertyController extends GetxController {
   // Used to notify the UI when cached variables change
   final RxInt variablesTick = 0.obs;
 
+  final RxList<String> wards = <String>[].obs;
+  final RxMap<String, dynamic> wardFilteredData = <String, dynamic>{}.obs;
+
   Box<dynamic>? _variables;
 
   @override
@@ -43,7 +46,46 @@ class PropertyController extends GetxController {
     payload['group_name'] = 'A';
     payload['ownerTitle'] = '1';
     await _maybeRefreshVariables();
+    fetchWards();
     super.onInit();
+  }
+
+  Future<void> fetchWards() async {
+    final List<String> w = await PropertyService().getAllWards();
+    wards.assignAll(w);
+  }
+
+  Future<void> onWardSelected(String wardId) async {
+    // Clear previous filtered data
+    wardFilteredData.clear();
+
+    // Fetch new data
+    final Map<String, dynamic> data = await PropertyService().filterByWard(
+      wardId,
+    );
+    wardFilteredData.assignAll(data);
+
+    // Auto-fill District and Province if available
+    if (data['districts'] is List && (data['districts'] as List).isNotEmpty) {
+      setField(
+        'landlord_district',
+        (data['districts'] as List).first.toString(),
+      );
+      setField(
+        'property_district',
+        (data['districts'] as List).first.toString(),
+      );
+    }
+    if (data['provinces'] is List && (data['provinces'] as List).isNotEmpty) {
+      setField(
+        'landlord_province',
+        (data['provinces'] as List).first.toString(),
+      );
+      setField(
+        'property_province',
+        (data['provinces'] as List).first.toString(),
+      );
+    }
   }
 
   Map<String, dynamic>? get cachedVariables {
@@ -70,8 +112,9 @@ class PropertyController extends GetxController {
 
   Future<void> _maybeRefreshVariables() async {
     final dynamic raw = _variables?.get('all');
-    final Map<String, dynamic>? cached =
-        raw is Map ? Map<String, dynamic>.from(raw) : null;
+    final Map<String, dynamic>? cached = raw is Map
+        ? Map<String, dynamic>.from(raw)
+        : null;
     final int now = DateTime.now().millisecondsSinceEpoch;
     final int ttlMs = 1000 * 60 * 60; // 1 hour
     if (cached == null || (now - (cached['fetchedAt'] as int? ?? 0)) > ttlMs) {
@@ -91,6 +134,10 @@ class PropertyController extends GetxController {
     payload['is_organization'] = value;
   }
 
+  final RxMap<String, dynamic> propertyWardFilteredData =
+      <String, dynamic>{}.obs;
+  final RxBool sameAsLandlord = false.obs;
+
   void addRegistryItem(int index, {String? meterNumber, String? imagePath}) {
     final Map<String, String> current = Map<String, String>.from(
       registry['$index'] ?? <String, String>{},
@@ -108,6 +155,58 @@ class PropertyController extends GetxController {
 
   void removeRegistryItem(int index) {
     registry.remove('$index');
+  }
+
+  Future<void> onPropertyWardSelected(String wardId) async {
+    // Clear previous filtered data
+    propertyWardFilteredData.clear();
+
+    // Fetch new data
+    final Map<String, dynamic> data = await PropertyService().filterByWard(
+      wardId,
+    );
+    propertyWardFilteredData.assignAll(data);
+
+    // Auto-fill District and Province if available
+    if (data['districts'] is List && (data['districts'] as List).isNotEmpty) {
+      setField(
+        'property_district',
+        (data['districts'] as List).first.toString(),
+      );
+    }
+    if (data['provinces'] is List && (data['provinces'] as List).isNotEmpty) {
+      setField(
+        'property_province',
+        (data['provinces'] as List).first.toString(),
+      );
+    }
+  }
+
+  void toggleSameAsLandlord(bool value) {
+    sameAsLandlord.value = value;
+    if (value) {
+      // Copy fields from Landlord to Property
+      setField('property_street_number', payload['landlord_street_number']);
+      setField('property_street_name', payload['landlord_street_name']);
+      setField('property_postcode', payload['landlord_postcode']);
+
+      final String? ward = payload['landlord_ward'] as String?;
+      if (ward != null) {
+        setField('property_ward', ward);
+        // Trigger fetch for property ward data
+        onPropertyWardSelected(ward).then((_) {
+          // After fetch, set other admin fields
+          setField('property_section', payload['landlord_section']);
+          setField('property_constituency', payload['landlord_constituency']);
+          setField('property_chiefdom', payload['landlord_chiefdom']);
+          setField('property_district', payload['landlord_district']);
+          setField('property_province', payload['landlord_province']);
+        });
+      }
+    } else {
+      // Clear property fields? Or leave them as is?
+      // Usually better to leave them so user can edit.
+    }
   }
 
   void addAssessmentPhoto(String path) {
@@ -170,32 +269,39 @@ class PropertyController extends GetxController {
 
     // Set default values for required fields if not present
     merged['categoryType'] = merged['categoryType'] ?? 'C'; // C or R
-    merged['randomdata'] = merged['randomdata'] ?? 
+    merged['randomdata'] =
+        merged['randomdata'] ??
         DateTime.now().millisecondsSinceEpoch.toString();
     merged['group_name'] = merged['group_name'] ?? 'A';
     merged['is_organization'] = merged['is_organization'] ?? '0';
     merged['is_completed'] = merged['is_completed'] ?? '0';
-    merged['is_property_inaccessible'] = merged['is_property_inaccessible'] ?? '0';
+    merged['is_property_inaccessible'] =
+        merged['is_property_inaccessible'] ?? '0';
     merged['sanitation'] = merged['sanitation'];
     merged['wall_material_condition'] = merged['wall_material_condition'];
 
     // Map landlord_ownerTitle_id (use ownerTitle if landlord_ownerTitle_id not set)
-    if (merged['landlord_ownerTitle_id'] == null && merged['ownerTitle'] != null) {
+    if (merged['landlord_ownerTitle_id'] == null &&
+        merged['ownerTitle'] != null) {
       merged['landlord_ownerTitle_id'] = merged['ownerTitle'].toString();
     }
 
     // Map assessment rate fields (API expects camelCase)
     if (merged['property_rate_without_gst'] != null) {
-      merged['assessmentRateWithoutGST'] = merged['property_rate_without_gst'].toString();
-      merged['assessment_rate_without_gst'] = merged['property_rate_without_gst'].toString();
+      merged['assessmentRateWithoutGST'] = merged['property_rate_without_gst']
+          .toString();
+      merged['assessment_rate_without_gst'] =
+          merged['property_rate_without_gst'].toString();
     } else {
       merged['assessmentRateWithoutGST'] = '0.00';
       merged['assessment_rate_without_gst'] = '0.00';
     }
 
     if (merged['property_rate_with_gst'] != null) {
-      merged['assessmentRateWithGST'] = merged['property_rate_with_gst'].toString();
-      merged['assessment_rate_with_gst'] = merged['property_rate_with_gst'].toString();
+      merged['assessmentRateWithGST'] = merged['property_rate_with_gst']
+          .toString();
+      merged['assessment_rate_with_gst'] = merged['property_rate_with_gst']
+          .toString();
     } else {
       merged['assessmentRateWithGST'] = '0';
       merged['assessment_rate_with_gst'] = '0';
@@ -233,7 +339,9 @@ class PropertyController extends GetxController {
     if (merged['assessment_categories_id'] != null) {
       if (merged['assessment_categories_id'] is! List) {
         final dynamic val = merged['assessment_categories_id'];
-        merged['assessment_categories_id'] = val != null ? [val.toString()] : [];
+        merged['assessment_categories_id'] = val != null
+            ? [val.toString()]
+            : [];
       }
     }
 
@@ -241,7 +349,9 @@ class PropertyController extends GetxController {
     if (merged['assessment_value_added_id'] != null) {
       if (merged['assessment_value_added_id'] is! List) {
         final dynamic val = merged['assessment_value_added_id'];
-        merged['assessment_value_added_id'] = val != null ? [val.toString()] : [];
+        merged['assessment_value_added_id'] = val != null
+            ? [val.toString()]
+            : [];
       }
     }
 
@@ -255,19 +365,22 @@ class PropertyController extends GetxController {
 
     // Handle newAdjustmentIds - should already be a JSON string from _CouncilAdjustmentsChips
     // If it's not set, set it to empty array JSON string
-    if (merged['newAdjustmentIds'] == null || merged['newAdjustmentIds'].toString().isEmpty) {
+    if (merged['newAdjustmentIds'] == null ||
+        merged['newAdjustmentIds'].toString().isEmpty) {
       merged['newAdjustmentIds'] = '[]';
     }
 
     // Ensure optional numeric fields are properly formatted
     if (merged['total_shops'] != null) {
-      merged['total_shops'] = int.tryParse(merged['total_shops'].toString()) ?? 0;
+      merged['total_shops'] =
+          int.tryParse(merged['total_shops'].toString()) ?? 0;
     }
     if (merged['total_mast'] != null) {
       merged['total_mast'] = int.tryParse(merged['total_mast'].toString()) ?? 0;
     }
     if (merged['total_compound_house'] != null) {
-      merged['total_compound_house'] = int.tryParse(merged['total_compound_house'].toString()) ?? 0;
+      merged['total_compound_house'] =
+          int.tryParse(merged['total_compound_house'].toString()) ?? 0;
     }
 
     // Handle swimming_pool - ensure it's a string or number
@@ -290,7 +403,8 @@ class PropertyController extends GetxController {
 
     // Ensure registry_digital_address is a string
     if (merged['registry_digital_address'] != null) {
-      merged['registry_digital_address'] = merged['registry_digital_address'].toString();
+      merged['registry_digital_address'] = merged['registry_digital_address']
+          .toString();
     }
 
     // Convert all null values to null explicitly (they will be filtered in service)
@@ -318,7 +432,10 @@ class PropertyController extends GetxController {
 
   Future<void> submit() async {
     if (!_validateCurrent()) {
-      ToastService.showError('Please fill all required fields', title: 'Validation Error');
+      ToastService.showError(
+        'Please fill all required fields',
+        title: 'Validation Error',
+      );
       return;
     }
 
@@ -333,19 +450,20 @@ class PropertyController extends GetxController {
       // Log the merged payload from all steps
       _printMergedPayload(finalPayload);
 
-      final Map<String, dynamic> response = await PropertyService().savePropertyMultipart(
-        fields: finalPayload,
-        registryItems: registry,
-        assessmentImagePaths: assessmentPhotos,
-      );
+      final Map<String, dynamic> response = await PropertyService()
+          .savePropertyMultipart(
+            fields: finalPayload,
+            registryItems: registry,
+            assessmentImagePaths: assessmentPhotos,
+          );
 
       // Log the complete API response
       _printApiResponse(response);
 
       // Check response for success
       if (response['success'] == true) {
-        final String message = response['message']?.toString() ?? 
-            'Property saved successfully';
+        final String message =
+            response['message']?.toString() ?? 'Property saved successfully';
         ToastService.showSuccess(message);
 
         // Reset local state so next create starts fresh
@@ -354,7 +472,8 @@ class PropertyController extends GetxController {
         // Refresh property list if controller exists
         try {
           if (Get.isRegistered<PropertyListController>()) {
-            final PropertyListController listController = Get.find<PropertyListController>();
+            final PropertyListController listController =
+                Get.find<PropertyListController>();
             await listController.refreshProperties();
           }
         } catch (e) {
@@ -364,8 +483,8 @@ class PropertyController extends GetxController {
         // Navigate to dashboard and clear navigation stack
         Get.offAllNamed(Routes.assessmentDashboard);
       } else {
-        final String errorMsg = response['message']?.toString() ?? 
-            'Failed to save property';
+        final String errorMsg =
+            response['message']?.toString() ?? 'Failed to save property';
         ToastService.showError(errorMsg, title: 'Failed');
       }
     } catch (e) {
@@ -513,14 +632,15 @@ class PropertyController extends GetxController {
         }
       }
     }
-    
+
     // Handle delivered_image_path separately (it's a file path)
     final String? deliveredImagePath =
         payload['delivered_image_path'] as String?;
     if (deliveredImagePath != null && deliveredImagePath.isNotEmpty) {
-      out['delivered_image'] = '(binary file: ${deliveredImagePath.split('/').last})';
+      out['delivered_image'] =
+          '(binary file: ${deliveredImagePath.split('/').last})';
     }
-    
+
     Get.log('Property payload: ${jsonEncode(out)}');
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print
@@ -560,7 +680,7 @@ class PropertyController extends GetxController {
         }
       }
     }
-    
+
     Get.log('Occupancy payload: ${jsonEncode(out)}');
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print
@@ -581,7 +701,7 @@ class PropertyController extends GetxController {
 
   void _printGeoRegistryPayload() {
     final Map<String, dynamic> out = <String, dynamic>{};
-    
+
     // Print registry points (1-8)
     for (int i = 1; i <= 8; i++) {
       final String key = 'registry_point$i';
@@ -590,25 +710,26 @@ class PropertyController extends GetxController {
         out[key] = value.toString();
       }
     }
-    
+
     // Print digital address and dor_lat_long
     if (payload['registry_digital_address'] != null &&
         payload['registry_digital_address'].toString().trim().isNotEmpty) {
-      out['registry_digital_address'] =
-          payload['registry_digital_address'].toString();
+      out['registry_digital_address'] = payload['registry_digital_address']
+          .toString();
     }
     if (payload['dor_lat_long'] != null &&
         payload['dor_lat_long'].toString().trim().isNotEmpty) {
       out['dor_lat_long'] = payload['dor_lat_long'].toString();
     }
-    
+
     // Print registry meters
-    final List<int> indices = registry.keys
-        .map((k) => int.tryParse(k) ?? -1)
-        .where((i) => i >= 0)
-        .toList()
-      ..sort();
-    
+    final List<int> indices =
+        registry.keys
+            .map((k) => int.tryParse(k) ?? -1)
+            .where((i) => i >= 0)
+            .toList()
+          ..sort();
+
     for (final int idx in indices) {
       final Map<String, String>? meter = registry['$idx'];
       if (meter != null) {
@@ -622,7 +743,7 @@ class PropertyController extends GetxController {
         }
       }
     }
-    
+
     Get.log('Geo Registry payload: ${jsonEncode(out)}');
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print
@@ -669,7 +790,7 @@ class PropertyController extends GetxController {
         }
       }
     }
-    
+
     // Handle assessment images separately (they're file paths)
     if (assessmentPhotos.isNotEmpty) {
       for (int i = 0; i < assessmentPhotos.length; i++) {
@@ -680,7 +801,7 @@ class PropertyController extends GetxController {
         }
       }
     }
-    
+
     Get.log('Assessment payload: ${jsonEncode(out)}');
     // Also print for dev consoles that do not capture Get.log
     // ignore: avoid_print

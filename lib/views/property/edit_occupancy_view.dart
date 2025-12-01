@@ -145,88 +145,119 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionCard(
-                title: 'Select Occupancy Types',
+              // Occupancy Type Dropdown
+              DropdownSearch<String>(
+                items: (filter, infiniteScrollProps) => _types,
+                decoratorProps: DropDownDecoratorProps(
+                  decoration: _decoration.copyWith(
+                    labelText: 'Occupancy Type*',
+                  ),
+                ),
+                popupProps: const PopupProps.menu(
+                  showSearchBox: true,
+                  searchFieldProps: TextFieldProps(
+                    decoration: InputDecoration(
+                      hintText: 'Search...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                selectedItem: _selectedTypes.isNotEmpty
+                    ? _selectedTypes.first
+                    : null,
+                validator: (v) => ValidationUtils.validateRequired(
+                  v,
+                  fieldName: 'Occupancy Type',
+                ),
+                onChanged: (v) {
+                  if (v != null) {
+                    setState(() {
+                      _selectedTypes.clear();
+                      _selectedTypes.add(v);
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Title and First Name Row
+              Row(
                 children: [
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final String t in _types)
-                        FilterChip(
-                          selected: _selectedTypes.contains(t),
-                          label: Text(t),
-                          onSelected: (bool val) {
-                            setState(() {
-                              if (val) {
-                                _selectedTypes.add(t);
-                              } else {
-                                _selectedTypes.remove(t);
-                              }
-                            });
-                          },
-                        ),
-                    ],
+                  Expanded(child: _buildTitleSelect()),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _controllers['tenant_first_name'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'First Name*',
+                      ),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'First Name',
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Tenant Information',
+              const SizedBox(height: 12),
+
+              // Middle Name and Surname Row
+              Row(
                 children: [
-                  _buildTitleSelect(),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['tenant_first_name'],
-                    decoration: _decoration.copyWith(
-                      labelText: 'Tenant First Name',
-                    ),
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) => ValidationUtils.validateRequired(
-                      v,
-                      fieldName: 'Tenant First Name',
+                  Expanded(
+                    child: TextFormField(
+                      controller: _controllers['middle_name'],
+                      decoration: _decoration.copyWith(
+                        labelText: 'Middle Name',
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['middle_name'],
-                    decoration: _decoration.copyWith(labelText: 'Middle Name'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['surname'],
-                    decoration: _decoration.copyWith(labelText: 'Surname'),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _controllers['surname'],
+                      decoration: _decoration.copyWith(labelText: 'Surname*'),
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) => ValidationUtils.validateRequired(
+                        v,
+                        fieldName: 'Surname',
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Contact',
-                children: [
-                  TextFormField(
-                    controller: _controllers['mobile_1'],
-                    decoration: _decoration.copyWith(
-                      labelText: 'Mobile Number 1',
-                    ),
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [PhoneNumberFormatter()],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) =>
-                        ValidationUtils.validatePhone(v, isRequired: false),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _controllers['mobile_2'],
-                    decoration: _decoration.copyWith(
-                      labelText: 'Mobile Number 2',
-                    ),
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [PhoneNumberFormatter()],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) =>
-                        ValidationUtils.validatePhone(v, isRequired: false),
-                  ),
-                ],
+              const SizedBox(height: 12),
+
+              // Mobile #1
+              TextFormField(
+                controller: _controllers['mobile_1'],
+                decoration: _decoration.copyWith(
+                  labelText: 'Mobile #1*',
+                  prefixText: '+232 ',
+                ),
+                keyboardType: TextInputType.phone,
+                inputFormatters: [PhoneNumberFormatter()],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) =>
+                    ValidationUtils.validatePhone(v, isRequired: true),
               ),
+              const SizedBox(height: 12),
+
+              // Mobile #2
+              TextFormField(
+                controller: _controllers['mobile_2'],
+                decoration: _decoration.copyWith(
+                  labelText: 'Mobile #2',
+                  prefixText: '+232 ',
+                ),
+                keyboardType: TextInputType.phone,
+                inputFormatters: [PhoneNumberFormatter()],
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                validator: (v) =>
+                    ValidationUtils.validatePhone(v, isRequired: false),
+              ),
+
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -341,39 +372,4 @@ class _EditOccupancyViewState extends State<EditOccupancyView> {
     isDense: true,
     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
   );
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.children});
-  final String title;
-  final List<Widget> children;
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.withOpacity(0.25)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [...children]),
-        ),
-      ],
-    );
-  }
 }

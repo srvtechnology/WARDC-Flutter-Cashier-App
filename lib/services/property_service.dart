@@ -37,6 +37,32 @@ class PropertyService {
     }
   }
 
+  Future<List<String>> getAllWards() async {
+    try {
+      final dio.Response<dynamic> res = await _dio.get('/all-wards');
+      final Map<String, dynamic> body = _cast(res.data);
+      if (body['wards'] is List) {
+        return List<String>.from(body['wards']);
+      }
+      return [];
+    } on dio.DioException catch (e) {
+      Get.log('Failed to fetch wards: $e');
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>> filterByWard(String wardId) async {
+    try {
+      final dio.Response<dynamic> res = await _dio.get(
+        '/filter-by-ward/$wardId',
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      Get.log('Failed to filter by ward: $e');
+      return {};
+    }
+  }
+
   Future<Map<String, dynamic>> getPropertyListing({
     int page = 1,
     int limit = 10,
