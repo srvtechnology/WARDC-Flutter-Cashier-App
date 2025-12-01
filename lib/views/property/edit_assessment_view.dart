@@ -380,16 +380,10 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                     inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: (v) {
-                      final breadthValue = _controllers['breadth']?.text;
-                      final decimalError = ValidationUtils.validateDecimal(
+                      return ValidationUtils.validateDecimal(
                         v,
                         decimalPlaces: 2,
                         isRequired: false,
-                      );
-                      if (decimalError != null) return decimalError;
-                      return ValidationUtils.validateLengthGreaterThanBreadth(
-                        v,
-                        breadthValue,
                       );
                     },
                     onChanged: (v) {
@@ -410,10 +404,10 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
                     inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     validator: (v) {
-                      final lengthValue = _controllers['length']?.text;
-                      return ValidationUtils.validateLengthGreaterThanBreadth(
-                        lengthValue,
+                      return ValidationUtils.validateDecimal(
                         v,
+                        decimalPlaces: 2,
+                        isRequired: false,
                       );
                     },
                     onChanged: (v) {
@@ -621,31 +615,62 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     Function(Set<int>) onChanged,
   ) {
     final List<Map<String, dynamic>> options = _getOptions(dataKey);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final Map<String, dynamic> o in options)
-              FilterChip(
-                selected: selected.contains(o['id'] as int),
-                label: Text(o['label']?.toString() ?? 'Item'),
-                onSelected: (bool val) {
-                  final newSelected = Set<int>.from(selected);
-                  if (val) {
-                    newSelected.add(o['id'] as int);
-                  } else {
-                    newSelected.remove(o['id'] as int);
-                  }
-                  onChanged(newSelected);
-                },
-              ),
-          ],
+
+    // Convert selected IDs to labels
+    final List<String> selectedLabels = [];
+    for (final id in selected) {
+      final option = options.firstWhereOrNull((o) => o['id'] == id);
+      if (option != null) {
+        selectedLabels.add(option['label']?.toString() ?? 'Item');
+      }
+    }
+
+    return DropdownSearch<String>.multiSelection(
+      items: (filter, infiniteScrollProps) {
+        return options.map((o) => o['label']?.toString() ?? 'Item').toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(labelText: label),
+      ),
+      popupProps: PopupPropsMultiSelection.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
         ),
-      ],
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          return ListTile(
+            title: Text(
+              item,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            trailing: isSelected
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            selected: isSelected,
+          );
+        },
+        showSelectedItems: true,
+      ),
+      selectedItems: selectedLabels,
+      compareFn: (item1, item2) => item1 == item2,
+      onChanged: (selectedLabels) {
+        // Convert labels back to IDs
+        final Set<int> newSelected = {};
+        for (final label in selectedLabels) {
+          final option = options.firstWhereOrNull(
+            (o) => o['label']?.toString() == label,
+          );
+          if (option != null) {
+            newSelected.add(option['id'] as int);
+          }
+        }
+        onChanged(newSelected);
+      },
     );
   }
 
@@ -653,34 +678,62 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     final List<Map<String, dynamic>> options = _getOptions(
       'council_adjustments',
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Select Council',
-          style: TextStyle(fontWeight: FontWeight.w600),
+
+    // Convert selected IDs to labels
+    final List<String> selectedLabels = [];
+    for (final id in _selectedCouncilAdjustments) {
+      final option = options.firstWhereOrNull((o) => o['id'] == id);
+      if (option != null) {
+        selectedLabels.add('${option['name']} - ${option['type']}');
+      }
+    }
+
+    return DropdownSearch<String>.multiSelection(
+      items: (filter, infiniteScrollProps) {
+        return options.map((o) => '${o['name']} - ${o['type']}').toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(labelText: 'Council Adjustments'),
+      ),
+      popupProps: PopupPropsMultiSelection.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
         ),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          children: [
-            for (final Map<String, dynamic> o in options)
-              FilterChip(
-                selected: _selectedCouncilAdjustments.contains(o['id'] as int),
-                label: Text('${o['name']} - ${o['type']}'),
-                onSelected: (bool val) {
-                  setState(() {
-                    if (val) {
-                      _selectedCouncilAdjustments.add(o['id'] as int);
-                    } else {
-                      _selectedCouncilAdjustments.remove(o['id'] as int);
-                    }
-                  });
-                },
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          return ListTile(
+            title: Text(
+              item,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-          ],
-        ),
-      ],
+            ),
+            trailing: isSelected
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            selected: isSelected,
+          );
+        },
+        showSelectedItems: true,
+      ),
+      selectedItems: selectedLabels,
+      compareFn: (item1, item2) => item1 == item2,
+      onChanged: (selectedLabels) {
+        setState(() {
+          _selectedCouncilAdjustments.clear();
+          for (final label in selectedLabels) {
+            final option = options.firstWhereOrNull(
+              (o) => '${o['name']} - ${o['type']}' == label,
+            );
+            if (option != null) {
+              _selectedCouncilAdjustments.add(option['id'] as int);
+            }
+          }
+        });
+      },
     );
   }
 

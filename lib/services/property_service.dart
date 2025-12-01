@@ -305,6 +305,26 @@ class PropertyService {
       );
     }
 
+    // Property Inaccessible Image
+    final String? inaccessibleImagePath =
+        fields['property_inaccessible_image'] as String?;
+    if (inaccessibleImagePath != null &&
+        inaccessibleImagePath.isNotEmpty &&
+        File(inaccessibleImagePath).existsSync()) {
+      formData.files.add(
+        MapEntry(
+          'property_inaccessible_image',
+          await dio.MultipartFile.fromFile(
+            inaccessibleImagePath,
+            filename: _fileName(inaccessibleImagePath),
+          ),
+        ),
+      );
+    }
+
+    // Log the complete FormData structure
+    _logFormData(formData, fields, registryItems, assessmentImagePaths);
+
     final dio.Options options = dio.Options(
       headers: <String, String>{
         'Accept': 'application/json',
@@ -343,23 +363,126 @@ class PropertyService {
     ),
   );
 
+  Future<Map<String, dynamic>> createInAccessibleProperties({
+    required String reason,
+    required String lat,
+    required String long,
+    required String enumerator,
+    required String imagePath,
+  }) async {
+    final String? token = await AuthService().getToken();
+    final dio.FormData formData = dio.FormData();
+
+    formData.fields.add(MapEntry('reason', reason));
+    formData.fields.add(MapEntry('lat', lat));
+    formData.fields.add(MapEntry('long', long));
+    formData.fields.add(MapEntry('enumerator', enumerator));
+
+    if (imagePath.isNotEmpty && File(imagePath).existsSync()) {
+      formData.files.add(
+        MapEntry(
+          'inaccessible_property_image',
+          await dio.MultipartFile.fromFile(
+            imagePath,
+            filename: _fileName(imagePath),
+          ),
+        ),
+      );
+    }
+
+    final dio.Options options = dio.Options(
+      headers: <String, String>{
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      contentType: 'multipart/form-data',
+    );
+
+    Get.log('--- Inaccessible Property Payload ---');
+    Get.log('URL: ${ApiConfig.baseUrl}createInAccessibleProperties');
+    Get.log('reason: $reason');
+    Get.log('lat: $lat');
+    Get.log('long: $long');
+    Get.log('enumerator: $enumerator');
+    Get.log('inaccessible_property_image: $imagePath');
+    Get.log('-------------------------------------');
+
+    try {
+      final dio.Response<dynamic> res = await _dio.post(
+        '/createInAccessibleProperties',
+        data: formData,
+        options: options,
+      );
+      return _cast(res.data);
+    } on dio.DioException catch (e) {
+      final String msg = _mapDioError(e);
+      Get.log('Create Inaccessible Property failed: $msg');
+      throw AuthException(msg);
+    }
+  }
+
   Future<Map<String, dynamic>> updateLandlord({
     required Map<String, dynamic> payload,
   }) async {
     final String? token = await AuthService().getToken();
 
-    final dio.Options options = dio.Options(
-      headers: <String, String>{
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      },
-    );
+    // Check if we have an image to upload
+    final String? inaccessibleImagePath =
+        payload['property_inaccessible_image'] as String?;
+    final bool hasImage =
+        inaccessibleImagePath != null &&
+        inaccessibleImagePath.isNotEmpty &&
+        File(inaccessibleImagePath).existsSync();
+
+    dynamic data;
+    final dio.Options options;
+
+    if (hasImage) {
+      final dio.FormData formData = dio.FormData();
+
+      // Add all fields
+      payload.forEach((key, value) {
+        if (key == 'property_inaccessible_image') return; // Skip image path
+        if (value == null) return;
+        formData.fields.add(MapEntry(key, value.toString()));
+      });
+
+      // Add image
+      formData.files.add(
+        MapEntry(
+          'property_inaccessible_image',
+          await dio.MultipartFile.fromFile(
+            inaccessibleImagePath,
+            filename: _fileName(inaccessibleImagePath),
+          ),
+        ),
+      );
+
+      data = formData;
+      options = dio.Options(
+        headers: <String, String>{
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+        contentType: 'multipart/form-data',
+      );
+    } else {
+      data = payload;
+      options = dio.Options(
+        headers: <String, String>{
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+      );
+    }
 
     try {
       final dio.Response<dynamic> res = await _updateDio.post(
         '/landloard/update',
-        data: payload,
+        data: data,
         options: options,
       );
       return _cast(res.data);
@@ -736,5 +859,102 @@ class PropertyService {
       }
     }
     return e.message ?? 'Unexpected error occurred.';
+  }
+
+  void _logFormData(
+    dio.FormData formData,
+    Map<String, dynamic> fields,
+    Map<String, dynamic>? registryItems,
+    List<String>? assessmentImagePaths,
+  ) {
+    // ignore: avoid_print
+    print(
+      '\n╔════════════════════════════════════════════════════════════════╗',
+    );
+    // ignore: avoid_print
+    print('║           COMPLETE FORMDATA PAYLOAD STRUCTURE                  ║');
+    // ignore: avoid_print
+    print(
+      '╚════════════════════════════════════════════════════════════════╝\n',
+    );
+
+    // Log all form fields
+    // ignore: avoid_print
+    print('┌─── FORM FIELDS (${formData.fields.length} fields) ───');
+    for (final field in formData.fields) {
+      // ignore: avoid_print
+      print('│ ${field.key}: "${field.value}"');
+    }
+    // ignore: avoid_print
+    print('└─────────────────────────────────────────────────────\n');
+
+    // Log all files
+    // ignore: avoid_print
+    print('┌─── FILES (${formData.files.length} files) ───');
+    for (final file in formData.files) {
+      // ignore: avoid_print
+      print('│ ${file.key}: ${file.value.filename ?? "unnamed"}');
+      // ignore: avoid_print
+      print('│   └─ Length: ${file.value.length} bytes');
+    }
+    // ignore: avoid_print
+    print('└─────────────────────────────────────────────────────\n');
+
+    // Log registry items structure
+    if (registryItems != null && registryItems.isNotEmpty) {
+      // ignore: avoid_print
+      print('┌─── REGISTRY ITEMS (${registryItems.length} meters) ───');
+      for (final entry in registryItems.entries) {
+        // ignore: avoid_print
+        print('│ Meter ${entry.key}:');
+        if (entry.value is Map) {
+          final item = entry.value as Map;
+          // ignore: avoid_print
+          print('│   ├─ meter_number: ${item['meter_number'] ?? "N/A"}');
+          // ignore: avoid_print
+          print('│   └─ meter_image: ${item['meter_image'] ?? "N/A"}');
+        }
+      }
+      // ignore: avoid_print
+      print('└─────────────────────────────────────────────────────\n');
+    }
+
+    // Log assessment images
+    if (assessmentImagePaths != null && assessmentImagePaths.isNotEmpty) {
+      // ignore: avoid_print
+      print(
+        '┌─── ASSESSMENT IMAGES (${assessmentImagePaths.length} images) ───',
+      );
+      for (int i = 0; i < assessmentImagePaths.length; i++) {
+        // ignore: avoid_print
+        print('│ Image ${i + 1}: ${assessmentImagePaths[i]}');
+      }
+      // ignore: avoid_print
+      print('└─────────────────────────────────────────────────────\n');
+    }
+
+    // Log original fields map for reference
+    // ignore: avoid_print
+    print('┌─── ORIGINAL FIELDS MAP ───');
+    for (final entry in fields.entries) {
+      if (entry.value is List) {
+        // ignore: avoid_print
+        print('│ ${entry.key}: ${entry.value}');
+      } else {
+        // ignore: avoid_print
+        print('│ ${entry.key}: "${entry.value}"');
+      }
+    }
+    // ignore: avoid_print
+    print('└─────────────────────────────────────────────────────\n');
+
+    // ignore: avoid_print
+    print('╔════════════════════════════════════════════════════════════════╗');
+    // ignore: avoid_print
+    print('║                  END OF FORMDATA PAYLOAD                       ║');
+    // ignore: avoid_print
+    print(
+      '╚════════════════════════════════════════════════════════════════╝\n',
+    );
   }
 }

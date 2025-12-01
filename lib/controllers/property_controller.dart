@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,7 +9,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/property_models.dart';
 import '../services/property_service.dart';
 import '../services/toast_service.dart';
+import '../services/auth_service.dart';
 import '../routes/app_pages.dart';
+import 'package:geolocator/geolocator.dart';
 import 'property_list_controller.dart';
 
 class PropertyController extends GetxController {
@@ -105,8 +108,133 @@ class PropertyController extends GetxController {
       // Notify listeners that variables have changed
       variablesTick.value++;
     } catch (e) {
-      // Network error; keep using cached values if any
-      Get.log('Variables fetch failed: $e');
+      Get.log('Error refreshing variables: $e');
+    }
+  }
+
+  Future<void> getCurrentLocation() async {
+    try {
+      bool serviceEnabled;
+      LocationPermission permission;
+
+      // Test if location services are enabled.
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ToastService.showError('Location services are disabled.');
+        return;
+      }
+
+      permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ToastService.showError('Location permissions are denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ToastService.showError(
+          'Location permissions are permanently denied, we cannot request permissions.',
+        );
+        return;
+      }
+
+      final Position position = await Geolocator.getCurrentPosition();
+      setField('inaccessible_lat', position.latitude.toString());
+      setField('inaccessible_lng', position.longitude.toString());
+    } catch (e) {
+      Get.log('Error getting location: $e');
+      ToastService.showError('Failed to get location: $e');
+    }
+  }
+
+  Future<void> submitInaccessibleProperty() async {
+    try {
+      final dynamic reasonRaw = payload['property_inaccessable'];
+      final String? reason = reasonRaw is String ? reasonRaw : null;
+
+      final dynamic latRaw = payload['inaccessible_lat'];
+      final String? lat = latRaw?.toString();
+
+      final dynamic lngRaw = payload['inaccessible_lng'];
+      final String? lng = lngRaw?.toString();
+
+      final dynamic imagePathRaw = payload['property_inaccessible_image'];
+      final String? imagePath = imagePathRaw?.toString();
+
+      if (reason == null || reason.isEmpty) {
+        ToastService.showError('Please select a reason for inaccessibility.');
+        return;
+      }
+      if (lat == null || lat.isEmpty || lng == null || lng.isEmpty) {
+        ToastService.showError('Please fetch location.');
+        return;
+      }
+      if (imagePath == null || imagePath.isEmpty) {
+        ToastService.showError('Please attach an image.');
+        return;
+      }
+
+      isSubmitting.value = true;
+      // Get current user
+      final Map<String, dynamic> userData = await AuthService().getUserData();
+      final dynamic data = userData['data'];
+      final String enumerator = (data is Map && data['name'] != null)
+          ? data['name'].toString()
+          : 'Unknown';
+
+      final result = await PropertyService().createInAccessibleProperties(
+        reason: reason,
+        lat: lat,
+        long: lng,
+        enumerator: enumerator,
+        imagePath: imagePath,
+      );
+      log(result.toString());
+      Get.log('Submission successful, showing success message');
+
+      Get.snackbar(
+        'Success',
+        'Inaccessible property reported successfully.',
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+        duration: const Duration(seconds: 2),
+      );
+
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      // Clear form fields
+      setField('inaccessible_property', '0');
+      setField('property_inaccessable', []);
+      setField('inaccessible_lat', null);
+      setField('inaccessible_lng', null);
+      setField('property_inaccessible_image', null);
+
+      Get.log('Navigating back');
+
+      // Try Navigator.pop first as it's more direct
+      if (Get.context != null && Navigator.canPop(Get.context!)) {
+        Navigator.of(Get.context!).pop(true);
+      } else {
+        Get.back(result: true);
+      }
+    } catch (e) {
+      Get.log('Error in submitInaccessibleProperty: $e');
+      Get.snackbar(
+        'Error',
+        'Failed to submit: $e',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 8,
+      );
+    } finally {
+      isSubmitting.value = false;
     }
   }
 

@@ -93,6 +93,39 @@ class PropertyWizardView extends GetView<PropertyController> {
                 Expanded(
                   child: Obx(() {
                     final bool isSubmitting = controller.isSubmitting.value;
+                    final bool inaccessible =
+                        controller.payload['inaccessible_property'] == '1';
+
+                    if (inaccessible) {
+                      return ElevatedButton.icon(
+                        onPressed: isSubmitting
+                            ? null
+                            : controller.submitInaccessibleProperty,
+                        icon: isSubmitting
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Icon(Icons.save, size: 18),
+                        label: const Text('SAVE'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      );
+                    }
+
                     return ElevatedButton.icon(
                       onPressed: isSubmitting
                           ? null
@@ -338,6 +371,7 @@ class _StepForms extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Checkboxes
+              // Inaccessible Property Checkbox
               Row(
                 children: [
                   SizedBox(
@@ -345,10 +379,25 @@ class _StepForms extends StatelessWidget {
                     width: 24,
                     child: Checkbox(
                       value: inaccessible,
-                      onChanged: (v) => controller.setField(
-                        'inaccessible_property',
-                        v == true ? '1' : '0',
-                      ),
+                      onChanged: (v) {
+                        controller.setField(
+                          'inaccessible_property',
+                          v == true ? '1' : '0',
+                        );
+                        if (v != true) {
+                          // Clear fields if unchecked
+                          controller.setField('property_inaccessable', []);
+                          controller.setField(
+                            'property_inaccessible_image',
+                            null,
+                          );
+                          controller.setField('inaccessible_lat', null);
+                          controller.setField('inaccessible_lng', null);
+                        } else {
+                          // Auto-fetch location when checked
+                          controller.getCurrentLocation();
+                        }
+                      },
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -361,6 +410,109 @@ class _StepForms extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // Conditional fields for Inaccessible Property
+              if (inaccessible) ...[
+                const SizedBox(height: 12),
+                _SingleSelectVariablesDropdown(
+                  controller: controller,
+                  dataKey: 'property_inaccessibles',
+                  payloadKey: 'property_inaccessable',
+                  label: 'Property Inaccessible*',
+                ),
+                const SizedBox(height: 12),
+
+                // Location Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('lat_${_val('inaccessible_lat')}'),
+                        initialValue: _val('inaccessible_lat'),
+                        readOnly: true,
+                        decoration: _decoration.copyWith(
+                          labelText: 'Latitude',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        key: ValueKey('lng_${_val('inaccessible_lng')}'),
+                        initialValue: _val('inaccessible_lng'),
+                        readOnly: true,
+                        decoration: _decoration.copyWith(
+                          labelText: 'Longitude',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: () => controller.getCurrentLocation(),
+                      icon: const Icon(Icons.location_on, color: Colors.blue),
+                      tooltip: 'Get Current Location',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Image Upload
+                _DashedPicker(
+                  label: 'Property Image',
+                  onPick: () async {
+                    final ImagePicker picker = ImagePicker();
+                    final XFile? photo = await picker.pickImage(
+                      source: ImageSource.camera,
+                      imageQuality: 75,
+                    );
+                    if (photo != null) {
+                      controller.setField(
+                        'property_inaccessible_image',
+                        photo.path,
+                      );
+                    }
+                  },
+                ),
+
+                // Show selected image preview if exists
+                if (_val('property_inaccessible_image') != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(_val('property_inaccessible_image')!),
+                            height: 150,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white,
+                          ),
+                          onPressed: () => controller.setField(
+                            'property_inaccessible_image',
+                            null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -1078,7 +1230,7 @@ class _StepForms extends StatelessWidget {
               onChanged: (v) => controller.setField('property_postcode', v),
             ),
             */
-            const SizedBox(height: 16),
+
             // Category Type
             DropdownSearch<String>(
               items: (filter, infiniteScrollProps) => const [
@@ -1786,16 +1938,10 @@ class _StepForms extends StatelessWidget {
                   inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (v) {
-                    final breadthValue = _val('assessment_breadth');
-                    final decimalError = ValidationUtils.validateDecimal(
+                    return ValidationUtils.validateDecimal(
                       v,
                       decimalPlaces: 2,
                       isRequired: false,
-                    );
-                    if (decimalError != null) return decimalError;
-                    return ValidationUtils.validateLengthGreaterThanBreadth(
-                      v,
-                      breadthValue,
                     );
                   },
                   onChanged: (v) {
@@ -1816,10 +1962,10 @@ class _StepForms extends StatelessWidget {
                   inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   validator: (v) {
-                    final lengthValue = _val('assessment_length');
-                    return ValidationUtils.validateLengthGreaterThanBreadth(
-                      lengthValue,
+                    return ValidationUtils.validateDecimal(
                       v,
+                      decimalPlaces: 2,
+                      isRequired: false,
                     );
                   },
                   onChanged: (v) {
@@ -1849,12 +1995,12 @@ class _StepForms extends StatelessWidget {
           }),
           const SizedBox(height: 16),
 
-          // Council Adjustments
-          _CouncilAdjustmentsDropdown(controller: controller),
+          // Council Adjustments (Multi-select Dropdown)
+          _CouncilAdjustmentsMultiSelectDropdown(controller: controller),
           const SizedBox(height: 12),
 
-          // Value Added Assessment Parameters
-          _SingleSelectVariablesDropdown(
+          // Value Added Assessment Parameters (Multi-select Dropdown)
+          _MultiSelectVariablesDropdown(
             controller: controller,
             dataKey: 'property_value_added',
             payloadKey: 'assessment_value_added_id',
@@ -2687,11 +2833,24 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> opts = _options;
-    final String? selectedValue = controller.payload[payloadKey] as String?;
+    final dynamic rawValue = controller.payload[payloadKey];
+    final String? selectedValue = rawValue is String ? rawValue : null;
+
+    // Find the label for the selected ID
+    String? selectedLabel;
+    if (selectedValue != null && selectedValue.isNotEmpty) {
+      final selectedOption = opts.firstWhereOrNull(
+        (o) => (o['id'] ?? o['value']).toString() == selectedValue,
+      );
+      if (selectedOption != null) {
+        selectedLabel = selectedOption['label']?.toString();
+      }
+    }
 
     return DropdownSearch<String>(
       items: (filter, infiniteScrollProps) {
-        return opts.map((o) => (o['id'] ?? o['value']).toString()).toList();
+        // Return labels for display
+        return opts.map((o) => o['label']?.toString() ?? 'Item').toList();
       },
       decoratorProps: DropDownDecoratorProps(
         decoration: const InputDecoration(
@@ -2717,13 +2876,9 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
           ),
         ),
         itemBuilder: (context, item, isDisabled, isSelected) {
-          final option = opts.firstWhere(
-            (o) => (o['id'] ?? o['value']).toString() == item,
-            orElse: () => {'label': item},
-          );
           return ListTile(
             title: Text(
-              option['label']?.toString() ?? 'Item',
+              item,
               style: TextStyle(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -2732,9 +2887,289 @@ class _SingleSelectVariablesDropdown extends StatelessWidget {
           );
         },
       ),
-      selectedItem: selectedValue,
+      selectedItem: selectedLabel,
       compareFn: (item1, item2) => item1 == item2,
-      onChanged: (v) => controller.setField(payloadKey, v),
+      onChanged: (selectedLabel) {
+        if (selectedLabel != null) {
+          // Find the ID for the selected label
+          final selectedOption = opts.firstWhereOrNull(
+            (o) => o['label']?.toString() == selectedLabel,
+          );
+          if (selectedOption != null) {
+            final id = (selectedOption['id'] ?? selectedOption['value'])
+                .toString();
+            controller.setField(payloadKey, id);
+          }
+        }
+      },
+    );
+  }
+}
+
+class _MultiSelectVariablesDropdown extends StatefulWidget {
+  const _MultiSelectVariablesDropdown({
+    required this.controller,
+    required this.dataKey,
+    required this.payloadKey,
+    required this.label,
+  });
+  final PropertyController controller;
+  final String dataKey;
+  final String payloadKey;
+  final String label;
+
+  @override
+  State<_MultiSelectVariablesDropdown> createState() =>
+      _MultiSelectVariablesDropdownState();
+}
+
+class _MultiSelectVariablesDropdownState
+    extends State<_MultiSelectVariablesDropdown> {
+  List<String> _selectedItems = [];
+
+  List<Map<String, dynamic>> get _options {
+    final dynamic vars = widget.controller.cachedVariables;
+    if (vars == null) return const <Map<String, dynamic>>[];
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+    final dynamic raw = data[widget.dataKey];
+    if (raw is List) {
+      final List<Map<String, dynamic>> normalized = <Map<String, dynamic>>[];
+      for (final dynamic e in raw) {
+        if (e is Map) {
+          normalized.add(Map<String, dynamic>.from(e));
+        }
+      }
+      return normalized;
+    }
+    return const <Map<String, dynamic>>[];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize selected items from payload
+    final dynamic existing = widget.controller.payload[widget.payloadKey];
+    if (existing is List) {
+      _selectedItems = existing.map((e) => e.toString()).toList();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> opts = _options;
+
+    // Convert selected IDs to labels for display
+    final List<String> selectedLabels = [];
+    for (final id in _selectedItems) {
+      final option = opts.firstWhereOrNull(
+        (o) => (o['id'] ?? o['value']).toString() == id,
+      );
+      if (option != null) {
+        selectedLabels.add(option['label']?.toString() ?? 'Item');
+      }
+    }
+
+    return DropdownSearch<String>.multiSelection(
+      items: (filter, infiniteScrollProps) {
+        return opts.map((o) => o['label']?.toString() ?? 'Item').toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green, width: 2),
+          ),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        ).copyWith(labelText: widget.label),
+      ),
+      popupProps: PopupPropsMultiSelection.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          return ListTile(
+            title: Text(
+              item,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            trailing: isSelected
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            selected: isSelected,
+          );
+        },
+        showSelectedItems: true,
+      ),
+      selectedItems: selectedLabels,
+      compareFn: (item1, item2) => item1 == item2,
+      onChanged: (selectedLabels) {
+        // Convert labels back to IDs
+        final List<String> selectedIds = [];
+        for (final label in selectedLabels) {
+          final option = opts.firstWhereOrNull(
+            (o) => o['label']?.toString() == label,
+          );
+          if (option != null) {
+            selectedIds.add((option['id'] ?? option['value']).toString());
+          }
+        }
+        setState(() {
+          _selectedItems = selectedIds;
+        });
+        widget.controller.setField(widget.payloadKey, selectedIds);
+      },
+    );
+  }
+}
+
+class _CouncilAdjustmentsMultiSelectDropdown extends StatefulWidget {
+  const _CouncilAdjustmentsMultiSelectDropdown({required this.controller});
+  final PropertyController controller;
+
+  @override
+  State<_CouncilAdjustmentsMultiSelectDropdown> createState() =>
+      _CouncilAdjustmentsMultiSelectDropdownState();
+}
+
+class _CouncilAdjustmentsMultiSelectDropdownState
+    extends State<_CouncilAdjustmentsMultiSelectDropdown> {
+  List<int> _selectedIds = [];
+
+  List<Map<String, dynamic>> get _options {
+    final dynamic vars = widget.controller.cachedVariables;
+    if (vars == null) return const <Map<String, dynamic>>[];
+    if (vars is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> container = Map<String, dynamic>.from(vars);
+    final dynamic dataRaw = container['data'];
+    if (dataRaw is! Map) return const <Map<String, dynamic>>[];
+    final Map<String, dynamic> data = Map<String, dynamic>.from(dataRaw);
+    final dynamic raw = data['council_adjustments'];
+    if (raw is List) {
+      final List<Map<String, dynamic>> normalized = <Map<String, dynamic>>[];
+      for (final dynamic e in raw) {
+        if (e is Map) {
+          normalized.add(Map<String, dynamic>.from(e));
+        }
+      }
+      return normalized;
+    }
+    return const <Map<String, dynamic>>[];
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Try to parse existing selection from payload
+    final dynamic existing = widget.controller.payload['newAdjustmentIds'];
+    if (existing is String && existing.isNotEmpty) {
+      try {
+        final List<dynamic> parsed = jsonDecode(existing);
+        _selectedIds = parsed
+            .map((e) => e is Map ? (e['id'] as int?) : null)
+            .whereType<int>()
+            .toList();
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> opts = _options;
+
+    // Convert selected IDs to labels for display
+    final List<String> selectedLabels = [];
+    for (final id in _selectedIds) {
+      final option = opts.firstWhereOrNull((o) => o['id'] == id);
+      if (option != null) {
+        selectedLabels.add('${option['name']} - ${option['type']}');
+      }
+    }
+
+    return DropdownSearch<String>.multiSelection(
+      items: (filter, infiniteScrollProps) {
+        return opts.map((o) => '${o['name']} - ${o['type']}').toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: const InputDecoration(
+          border: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Colors.green, width: 2),
+          ),
+          isDense: true,
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          labelText: 'Council Adjustments',
+        ),
+      ),
+      popupProps: PopupPropsMultiSelection.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          return ListTile(
+            title: Text(
+              item,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            trailing: isSelected
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : null,
+            selected: isSelected,
+          );
+        },
+        showSelectedItems: true,
+      ),
+      selectedItems: selectedLabels,
+      compareFn: (item1, item2) => item1 == item2,
+      onChanged: (selectedLabels) {
+        // Convert labels back to full objects
+        final List<Map<String, dynamic>> selectedObjects = [];
+        final List<int> selectedIds = [];
+        for (final label in selectedLabels) {
+          final option = opts.firstWhereOrNull(
+            (o) => '${o['name']} - ${o['type']}' == label,
+          );
+          if (option != null) {
+            selectedObjects.add(option);
+            selectedIds.add(option['id'] as int);
+          }
+        }
+        setState(() {
+          _selectedIds = selectedIds;
+        });
+        widget.controller.setField(
+          'newAdjustmentIds',
+          jsonEncode(selectedObjects),
+        );
+      },
     );
   }
 }
@@ -2941,9 +3376,21 @@ class _CouncilAdjustmentsDropdownState
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> opts = _options;
 
+    // Find the label for the selected ID
+    String? selectedLabel;
+    if (_selectedValue != null && _selectedValue!.isNotEmpty) {
+      final selectedOption = opts.firstWhereOrNull(
+        (o) => o['id'].toString() == _selectedValue,
+      );
+      if (selectedOption != null) {
+        selectedLabel = '${selectedOption['name']} - ${selectedOption['type']}';
+      }
+    }
+
     return DropdownSearch<String>(
       items: (filter, infiniteScrollProps) {
-        return opts.map((o) => o['id'].toString()).toList();
+        // Return labels for display (name - type)
+        return opts.map((o) => '${o['name']} - ${o['type']}').toList();
       },
       decoratorProps: DropDownDecoratorProps(
         decoration: const InputDecoration(
@@ -2970,13 +3417,9 @@ class _CouncilAdjustmentsDropdownState
           ),
         ),
         itemBuilder: (context, item, isDisabled, isSelected) {
-          final option = opts.firstWhere(
-            (o) => o['id'].toString() == item,
-            orElse: () => {'name': item, 'type': ''},
-          );
           return ListTile(
             title: Text(
-              '${option['name']} - ${option['type']}',
+              item,
               style: TextStyle(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -2985,16 +3428,22 @@ class _CouncilAdjustmentsDropdownState
           );
         },
       ),
-      selectedItem: _selectedValue,
+      selectedItem: selectedLabel,
       compareFn: (item1, item2) => item1 == item2,
-      onChanged: (v) {
-        setState(() => _selectedValue = v);
-        if (v != null) {
-          final selected = opts.firstWhere((o) => o['id'].toString() == v);
-          widget.controller.setField(
-            'newAdjustmentIds',
-            jsonEncode([selected]),
+      onChanged: (selectedLabel) {
+        if (selectedLabel != null) {
+          // Find the ID for the selected label
+          final selectedOption = opts.firstWhereOrNull(
+            (o) => '${o['name']} - ${o['type']}' == selectedLabel,
           );
+          if (selectedOption != null) {
+            final id = selectedOption['id'].toString();
+            setState(() => _selectedValue = id);
+            widget.controller.setField(
+              'newAdjustmentIds',
+              jsonEncode([selectedOption]),
+            );
+          }
         }
       },
     );
