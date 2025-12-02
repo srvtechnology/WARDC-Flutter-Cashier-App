@@ -10,7 +10,7 @@ void main() {
   // Configure API environment
   // Set to Environment.development for dev, Environment.production for prod
   // Default is production (https://wardc.srvtechnology.com/public/api/)
-  ApiConfig.setEnvironment(Environment.production);
+  ApiConfig.setEnvironment(Environment.development);
   runApp(const MyApp());
 }
 

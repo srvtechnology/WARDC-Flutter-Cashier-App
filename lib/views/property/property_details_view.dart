@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -421,9 +420,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
   List<dynamic> get _registryMeters =>
       (prop['registry_meters'] as List?) ?? const [];
 
+  List<dynamic> _fetchedAdjustments = [];
+
   @override
   void initState() {
     super.initState();
+
     _loadVariables();
   }
 
@@ -431,22 +433,25 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     if (_loadingVars) return;
     setState(() => _loadingVars = true);
     try {
-      // First check if the property data already includes the 'data' object
-      if (prop['data'] != null && prop['data'] is Map) {
+      final data = await PropertyService().getAllVariables();
+
+      // Fetch property details to get council adjustments
+      final String propertyId = widget.property['id'].toString();
+      final details = await PropertyService().getPropertyDetails(
+        propertyId: propertyId,
+      );
+
+      if (details['allAdjustments'] != null) {
+        _fetchedAdjustments = details['allAdjustments'] as List;
+      }
+
+      if (mounted) {
         setState(() {
-          _variables = Map<String, dynamic>.from(prop['data'] as Map);
-        });
-      } else {
-        // Otherwise fetch from API
-        final Map<String, dynamic> data = await PropertyService()
-            .getAllVariables();
-        setState(() {
-          _variables = data;
+          _variables = {'data': data};
+          _loadingVars = false;
         });
       }
-    } catch (_) {
-      // ignore
-    } finally {
+    } catch (e) {
       if (mounted) setState(() => _loadingVars = false);
     }
   }
@@ -1499,6 +1504,26 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
     String? fallbackIdsKey,
     String? fallbackVariablesKey,
   }) {
+    // Special handling for council adjustments from API
+    if (listKey == 'council_adjustments' && _fetchedAdjustments.isNotEmpty) {
+      final List<String> labels = [];
+      for (final item in _fetchedAdjustments) {
+        if (item is Map && item['adjustmentsDetails'] is List) {
+          final details = item['adjustmentsDetails'] as List;
+          if (details.isNotEmpty && details[0] is Map) {
+            final detail = details[0];
+            final name = detail['name']?.toString() ?? '';
+            final type = detail['type']?.toString() ?? '';
+            if (name.isNotEmpty && type.isNotEmpty) {
+              labels.add('$name - $type');
+            } else if (name.isNotEmpty) {
+              labels.add(name);
+            }
+          }
+        }
+      }
+      if (labels.isNotEmpty) return labels;
+    }
     final List<String> labels = _getLabelsList(listKey, preferredKeys);
     if (labels.isNotEmpty) return labels;
 

@@ -1,6 +1,6 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dropdown_search/dropdown_search.dart';
@@ -47,14 +47,11 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
   Map<String, dynamic>? _variables;
   bool _loadingVars = false;
   bool _isSubmitting = false;
+  List<dynamic> _fetchedAdjustments = [];
 
   bool get _shouldShowMastsField => _selectedValueAdded.contains(8);
   bool get _shouldShowShopsField => _selectedValueAdded.contains(9);
   bool get _shouldShowCompoundFields => _gatedCommunity == '1';
-  bool get _shouldShowAdditionalInfoSection =>
-      _shouldShowMastsField ||
-      _shouldShowShopsField ||
-      _shouldShowCompoundFields;
 
   Map<String, dynamic> get _assessmentsObject {
     final List<dynamic>? assessments =
@@ -104,42 +101,40 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
       }
     }
 
-    // Initialize single selects
+    // Initialize single select values
     _wallMaterials = _assessmentsObject['property_wall_materials']?.toString();
     _roofsMaterials = _assessmentsObject['roofs_materials']?.toString();
     _windowType = _assessmentsObject['property_window_type']?.toString();
     _propertyUse = _assessmentsObject['property_use']?.toString();
     _zone = _assessmentsObject['zone']?.toString();
-    _swimmingPool =
-        _assessmentsObject['swimming_id']?.toString() ??
-        _assessmentsObject['swimming_pool']?.toString();
-    _gatedCommunity = _assessmentsObject['gated_community']?.toString() ?? '0';
+    _swimmingPool = _assessmentsObject['swimming_pool']?.toString();
+    _gatedCommunity = _assessmentsObject['gated_community']?.toString();
 
-    // Initialize text fields
+    // Initialize controllers
     _controllers['length'] = TextEditingController(
-      text:
-          _assessmentsObject['assessment_length']?.toString() ??
-          _assessmentsObject['length']?.toString() ??
-          '',
+      text: _assessmentsObject['length']?.toString() ?? '',
     );
     _controllers['breadth'] = TextEditingController(
-      text:
-          _assessmentsObject['assessment_breadth']?.toString() ??
-          _assessmentsObject['breadth']?.toString() ??
-          '',
+      text: _assessmentsObject['breadth']?.toString() ?? '',
     );
-    _controllers['no_of_shop'] = TextEditingController(
-      text: _assessmentsObject['no_of_shop']?.toString() ?? '',
-    );
-    _controllers['no_of_mast'] = TextEditingController(
+    _controllers['total_mast'] = TextEditingController(
       text: _assessmentsObject['no_of_mast']?.toString() ?? '',
     );
-    _controllers['no_of_compound_house'] = TextEditingController(
+    _controllers['total_shops'] = TextEditingController(
+      text: _assessmentsObject['no_of_shop']?.toString() ?? '',
+    );
+    _controllers['total_compound_house'] = TextEditingController(
       text: _assessmentsObject['no_of_compound_house']?.toString() ?? '',
     );
     _controllers['compound_name'] = TextEditingController(
       text: _assessmentsObject['compound_name']?.toString() ?? '',
     );
+
+    // Initialize images
+    _assessmentImage1Path = _assessmentsObject['assessment_images_1']
+        ?.toString();
+    _assessmentImage2Path = _assessmentsObject['assessment_images_2']
+        ?.toString();
   }
 
   @override
@@ -155,6 +150,17 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     setState(() => _loadingVars = true);
     try {
       final data = await _propertyService.getAllVariables();
+
+      // Fetch property details to get council adjustments
+      final String propertyId = widget.property['id'].toString();
+      final details = await _propertyService.getPropertyDetails(
+        propertyId: propertyId,
+      );
+
+      if (details['allAdjustments'] != null) {
+        _fetchedAdjustments = details['allAdjustments'] as List;
+      }
+
       setState(() {
         _variables = {'data': data};
         _loadingVars = false;
@@ -174,12 +180,44 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     final data = _variables!['data'] as Map<String, dynamic>?;
     if (data == null) return;
 
-    // Try to parse existing adjustments from assessmentsObject
-    // Council adjustments might be stored as a list of IDs or as full objects
-    final dynamic councilRaw =
-        _assessmentsObject['council'] ??
+    // 1. Try to get from fetched adjustments (API)
+    if (_fetchedAdjustments.isNotEmpty) {
+      for (final item in _fetchedAdjustments) {
+        if (item is Map && item['adjustment_id'] != null) {
+          _selectedCouncilAdjustments.add(item['adjustment_id'] as int);
+        }
+      }
+      return; // Found data, stop here
+    }
+
+    // 2. Try to parse existing adjustments from assessmentsObject first
+    dynamic councilRaw =
         _assessmentsObject['council_adjustments'] ??
-        _assessmentsObject['councils'];
+        _assessmentsObject['council'] ??
+        _assessmentsObject['councils'] ??
+        _assessmentsObject['newAdjustmentIds'];
+
+    // If not found in assessmentsObject, check the parent property object
+    councilRaw ??=
+        widget.property['council_adjustments'] ??
+        widget.property['council'] ??
+        widget.property['councils'] ??
+        widget.property['newAdjustmentIds'];
+
+    // Also check in property['data']['property'] if it exists
+    if (councilRaw == null) {
+      final dynamic propData = widget.property['data'];
+      if (propData is Map) {
+        final dynamic propertyNested = propData['property'];
+        if (propertyNested is Map) {
+          councilRaw =
+              propertyNested['council_adjustments'] ??
+              propertyNested['council'] ??
+              propertyNested['councils'] ??
+              propertyNested['newAdjustmentIds'];
+        }
+      }
+    }
 
     if (councilRaw is List) {
       for (final item in councilRaw) {
@@ -194,6 +232,31 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
           }
         }
       }
+    } else if (councilRaw is String) {
+      // Handle JSON string (e.g. "[1, 2]") or single ID
+      if (councilRaw.trim().startsWith('[')) {
+        try {
+          final List<dynamic> list = jsonDecode(councilRaw);
+          for (final item in list) {
+            if (item is int) {
+              _selectedCouncilAdjustments.add(item);
+            } else if (item is String) {
+              final int? id = int.tryParse(item);
+              if (id != null) _selectedCouncilAdjustments.add(id);
+            }
+          }
+        } catch (_) {
+          // Ignore parse error
+        }
+      } else {
+        final int? id = int.tryParse(councilRaw);
+        if (id != null) {
+          _selectedCouncilAdjustments.add(id);
+        }
+      }
+    } else if (councilRaw is int) {
+      // Handle single ID as int
+      _selectedCouncilAdjustments.add(councilRaw);
     }
   }
 
@@ -298,279 +361,288 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _SectionCard(
-                title: 'Classification',
-                children: [
-                  _buildMultiSelectChips(
-                    'property_categories',
-                    'Select Category',
-                    _selectedCategories,
-                    (selected) {
-                      setState(() {
-                        _selectedCategories.clear();
-                        _selectedCategories.addAll(selected);
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildMultiSelectChips(
-                    'property_types',
-                    'Select Types',
-                    _selectedTypes,
-                    (selected) {
-                      setState(() {
-                        _selectedTypes.clear();
-                        _selectedTypes.addAll(selected);
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildMultiSelectChips(
-                    'property_value_added',
-                    'Select property value added',
-                    _selectedValueAdded,
-                    (selected) {
-                      setState(() {
-                        _selectedValueAdded.clear();
-                        _selectedValueAdded.addAll(selected);
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  _buildCouncilAdjustmentsChips(),
-                ],
+              // Property Categories
+              _buildSingleSelectChips(
+                'property_categories',
+                'Property Categories*',
+                _selectedCategories.isNotEmpty
+                    ? _selectedCategories.first
+                    : null,
+                (selected) {
+                  setState(() {
+                    _selectedCategories.clear();
+                    if (selected != null) {
+                      _selectedCategories.add(selected);
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Property Types
+              _buildSingleSelectChips(
+                'property_types',
+                'Property Type*',
+                _selectedTypes.isNotEmpty ? _selectedTypes.first : null,
+                (selected) {
+                  setState(() {
+                    _selectedTypes.clear();
+                    if (selected != null) {
+                      _selectedTypes.add(selected);
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Wall Material
+              _buildSingleSelectDropdownWithLabel(
+                'property_wall_materials',
+                'Wall Material*',
+                _wallMaterials,
+                (v) => setState(() => _wallMaterials = v),
+              ),
+              const SizedBox(height: 12),
+
+              // Roof Material
+              _buildSingleSelectDropdownWithLabel(
+                'property_roofs_materials',
+                'Roof Type*',
+                _roofsMaterials,
+                (v) => setState(() => _roofsMaterials = v),
               ),
               const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Materials',
-                children: [
-                  _buildSingleSelectDropdown(
-                    'property_wall_materials',
-                    'Wall Material',
-                    _wallMaterials,
-                    (v) => setState(() => _wallMaterials = v),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSingleSelectDropdown(
-                    'property_roofs_materials',
-                    'Roof Material',
-                    _roofsMaterials,
-                    (v) => setState(() => _roofsMaterials = v),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSingleSelectDropdown(
-                    'property_window_types',
-                    'Window Type',
-                    _windowType,
-                    (v) => setState(() => _windowType = v),
-                  ),
-                ],
+
+              // Property Dimension Calculator
+              const Text(
+                'Property Dimension Calculator',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Dimensions',
+              const SizedBox(height: 8),
+              Row(
                 children: [
-                  TextFormField(
-                    key: const ValueKey('length_field'),
-                    controller: _controllers['length'],
-                    decoration: _decoration.copyWith(labelText: 'length'),
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) {
-                      return ValidationUtils.validateDecimal(
-                        v,
-                        decimalPlaces: 2,
-                        isRequired: false,
-                      );
-                    },
-                    onChanged: (v) {
-                      // Trigger validation on breadth field when length changes
-                      if (_formKey.currentState != null) {
-                        _formKey.currentState!.validate();
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    key: const ValueKey('breadth_field'),
-                    controller: _controllers['breadth'],
-                    decoration: _decoration.copyWith(labelText: 'breadth'),
-                    keyboardType: TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    inputFormatters: [DecimalInputFormatter(decimalPlaces: 2)],
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                    validator: (v) {
-                      return ValidationUtils.validateDecimal(
-                        v,
-                        decimalPlaces: 2,
-                        isRequired: false,
-                      );
-                    },
-                    onChanged: (v) {
-                      // Trigger validation on length field when breadth changes
-                      if (_formKey.currentState != null) {
-                        _formKey.currentState!.validate();
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Property Details',
-                children: [
-                  _buildSingleSelectDropdown(
-                    'property_uses',
-                    'Property use',
-                    _propertyUse,
-                    (v) => setState(() => _propertyUse = v),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSingleSelectDropdown(
-                    'property_zones',
-                    'Property zone',
-                    _zone,
-                    (v) => setState(() => _zone = v),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSingleSelectDropdown(
-                    'swimmings',
-                    'Swimming pool',
-                    _swimmingPool,
-                    (v) => setState(() => _swimmingPool = v),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownSearch<String>(
-                    items: (filter, infiniteScrollProps) => const ['No', 'Yes'],
-                    decoratorProps: DropDownDecoratorProps(
-                      decoration: _decoration.copyWith(
-                        labelText: 'Gated community',
+                  Expanded(
+                    child: TextFormField(
+                      key: const ValueKey('length_field'),
+                      controller: _controllers['length'],
+                      decoration: _decoration.copyWith(labelText: 'Length'),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
-                    ),
-                    popupProps: const PopupProps.menu(
-                      showSearchBox: true,
-                      searchFieldProps: TextFieldProps(
-                        decoration: InputDecoration(
-                          hintText: 'Search...',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                    ),
-                    selectedItem: _gatedCommunity == '0'
-                        ? 'No'
-                        : (_gatedCommunity == '1' ? 'Yes' : 'No'),
-                    onChanged: (v) => setState(
-                      () => _gatedCommunity = v == 'Yes' ? '1' : '0',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              if (_shouldShowAdditionalInfoSection)
-                _SectionCard(
-                  title: 'Additional Information',
-                  children: [
-                    if (_shouldShowMastsField)
-                      TextFormField(
-                        controller: _controllers['no_of_mast'],
-                        decoration: _decoration.copyWith(
-                          labelText: 'No of Masts',
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [IntegerInputFormatter()],
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (v) => ValidationUtils.validateInteger(
+                      inputFormatters: [
+                        DecimalInputFormatter(decimalPlaces: 2),
+                      ],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) {
+                        return ValidationUtils.validateDecimal(
                           v,
-                          min: 0,
+                          decimalPlaces: 2,
                           isRequired: false,
-                        ),
+                        );
+                      },
+                      onChanged: (v) {
+                        if (_formKey.currentState != null) {
+                          _formKey.currentState!.validate();
+                        }
+                        setState(() {}); // Rebuild to update dimension
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      key: const ValueKey('breadth_field'),
+                      controller: _controllers['breadth'],
+                      decoration: _decoration.copyWith(labelText: 'Breadth'),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
                       ),
-                    if (_shouldShowMastsField &&
-                        (_shouldShowShopsField || _shouldShowCompoundFields))
-                      const SizedBox(height: 12),
-                    if (_shouldShowShopsField)
-                      TextFormField(
-                        controller: _controllers['no_of_shop'],
-                        decoration: _decoration.copyWith(
-                          labelText: 'No of Shops',
-                        ),
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [IntegerInputFormatter()],
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        validator: (v) => ValidationUtils.validateInteger(
+                      inputFormatters: [
+                        DecimalInputFormatter(decimalPlaces: 2),
+                      ],
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      validator: (v) {
+                        return ValidationUtils.validateDecimal(
                           v,
-                          min: 0,
+                          decimalPlaces: 2,
                           isRequired: false,
-                        ),
-                      ),
-                    if (_shouldShowShopsField && _shouldShowCompoundFields)
-                      const SizedBox(height: 12),
-                    if (_shouldShowCompoundFields)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          TextFormField(
-                            controller: _controllers['no_of_compound_house'],
-                            decoration: _decoration.copyWith(
-                              labelText: 'No of Compound House',
-                            ),
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [IntegerInputFormatter()],
-                            autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
-                            validator: (v) => ValidationUtils.validateInteger(
-                              v,
-                              min: 0,
-                              isRequired: false,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _controllers['compound_name'],
-                            decoration: _decoration.copyWith(
-                              labelText: 'Compound Name',
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
+                        );
+                      },
+                      onChanged: (v) {
+                        if (_formKey.currentState != null) {
+                          _formKey.currentState!.validate();
+                        }
+                        setState(() {}); // Rebuild to update dimension
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Builder(
+                builder: (context) {
+                  final length =
+                      double.tryParse(_controllers['length']?.text ?? '') ??
+                      0.0;
+                  final breadth =
+                      double.tryParse(_controllers['breadth']?.text ?? '') ??
+                      0.0;
+                  final dimension = length * breadth;
+                  return Text(
+                    'Dimension in Sq. Meters: ${dimension.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.green.shade700,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Council Adjustments
+              _buildCouncilAdjustmentsChips(),
+              const SizedBox(height: 12),
+
+              // Value Added Assessment Parameters
+              _buildMultiSelectChips(
+                'property_value_added',
+                'Value Added Assessment Parameters*',
+                _selectedValueAdded,
+                (selected) {
+                  setState(() {
+                    _selectedValueAdded.clear();
+                    _selectedValueAdded.addAll(selected);
+                  });
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // Swimming Pool
+              _buildSingleSelectDropdownWithLabel(
+                'swimmings',
+                'Swimming Pool',
+                _swimmingPool,
+                (v) => setState(() => _swimmingPool = v),
+              ),
+              const SizedBox(height: 12),
+
+              // Property Use
+              _buildSingleSelectDropdownWithLabel(
+                'property_uses',
+                'Property Use*',
+                _propertyUse,
+                (v) => setState(() => _propertyUse = v),
+              ),
+              const SizedBox(height: 12),
+
+              // Zones
+              _buildSingleSelectDropdownWithLabel(
+                'property_zones',
+                'Zones*',
+                _zone,
+                (v) => setState(() => _zone = v),
+              ),
+              const SizedBox(height: 16),
+
+              // Gated Community Checkbox
+              CheckboxListTile(
+                value: _gatedCommunity == '1',
+                onChanged: (v) =>
+                    setState(() => _gatedCommunity = v == true ? '1' : '0'),
+                title: const Text('Gated Community'),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                activeColor: Colors.green,
+              ),
+
+              // Additional Information - Conditional fields
+              if (_shouldShowMastsField)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextFormField(
+                    controller: _controllers['no_of_mast'],
+                    decoration: _decoration.copyWith(labelText: 'No of Masts'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [IntegerInputFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateInteger(
+                      v,
+                      min: 0,
+                      isRequired: false,
+                    ),
+                  ),
                 ),
+              if (_shouldShowShopsField)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextFormField(
+                    controller: _controllers['no_of_shop'],
+                    decoration: _decoration.copyWith(labelText: 'No of Shops'),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [IntegerInputFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateInteger(
+                      v,
+                      min: 0,
+                      isRequired: false,
+                    ),
+                  ),
+                ),
+              if (_shouldShowCompoundFields) ...[
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextFormField(
+                    controller: _controllers['no_of_compound_house'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'No of Compound House',
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [IntegerInputFormatter()],
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (v) => ValidationUtils.validateInteger(
+                      v,
+                      min: 0,
+                      isRequired: false,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: TextFormField(
+                    controller: _controllers['compound_name'],
+                    decoration: _decoration.copyWith(
+                      labelText: 'Compound Name',
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
-              _SectionCard(
-                title: 'Property Images',
+
+              // Property Images
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _AssessmentImageBox(
-                          label: 'Image 1',
-                          imagePath: _assessmentImage1Path,
-                          existingImageUrl:
-                              _assessmentsObject['assessment_images_1']
-                                  ?.toString(),
-                          onPick: () => _pickImage(1),
-                          onRemove: () =>
-                              setState(() => _assessmentImage1Path = null),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _AssessmentImageBox(
-                          label: 'Image 2',
-                          imagePath: _assessmentImage2Path,
-                          existingImageUrl:
-                              _assessmentsObject['assessment_images_2']
-                                  ?.toString(),
-                          onPick: () => _pickImage(2),
-                          onRemove: () =>
-                              setState(() => _assessmentImage2Path = null),
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: _AssessmentImageBox(
+                      label: 'Image 1',
+                      imagePath: _assessmentImage1Path,
+                      existingImageUrl:
+                          _assessmentsObject['assessment_images_1']?.toString(),
+                      onPick: () => _pickImage(1),
+                      onRemove: () =>
+                          setState(() => _assessmentImage1Path = null),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AssessmentImageBox(
+                      label: 'Image 2',
+                      imagePath: _assessmentImage2Path,
+                      existingImageUrl:
+                          _assessmentsObject['assessment_images_2']?.toString(),
+                      onPick: () => _pickImage(2),
+                      onRemove: () =>
+                          setState(() => _assessmentImage2Path = null),
+                    ),
                   ),
                 ],
               ),
@@ -605,6 +677,68 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSingleSelectChips(
+    String dataKey,
+    String label,
+    int? selected,
+    Function(int?) onChanged,
+  ) {
+    final List<Map<String, dynamic>> options = _getOptions(dataKey);
+
+    // Convert selected ID to label
+    String? selectedLabel;
+    if (selected != null) {
+      final option = options.firstWhereOrNull((o) => o['id'] == selected);
+      if (option != null) {
+        selectedLabel = option['label']?.toString() ?? 'Item';
+      }
+    }
+
+    return DropdownSearch<String>(
+      items: (filter, infiniteScrollProps) {
+        return options.map((o) => o['label']?.toString() ?? 'Item').toList();
+      },
+      decoratorProps: DropDownDecoratorProps(
+        decoration: _decoration.copyWith(labelText: label),
+      ),
+      popupProps: PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: const TextFieldProps(
+          decoration: InputDecoration(
+            hintText: 'Search...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        itemBuilder: (context, item, isDisabled, isSelected) {
+          return ListTile(
+            title: Text(
+              item,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            selected: isSelected,
+          );
+        },
+      ),
+      selectedItem: selectedLabel,
+      compareFn: (item1, item2) => item1 == item2,
+      onChanged: (selectedLabel) {
+        // Convert label back to ID
+        if (selectedLabel == null) {
+          onChanged(null);
+          return;
+        }
+        final option = options.firstWhereOrNull(
+          (o) => o['label']?.toString() == selectedLabel,
+        );
+        if (option != null) {
+          onChanged(option['id'] as int);
+        }
+      },
     );
   }
 
@@ -682,15 +816,40 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     // Convert selected IDs to labels
     final List<String> selectedLabels = [];
     for (final id in _selectedCouncilAdjustments) {
-      final option = options.firstWhereOrNull((o) => o['id'] == id);
+      // Compare IDs as strings to handle both int and string types from API
+      final option = options.firstWhereOrNull(
+        (o) => o['id']?.toString() == id.toString(),
+      );
       if (option != null) {
-        selectedLabels.add('${option['name']} - ${option['type']}');
+        // Try different label formats
+        String label;
+        if (option['name'] != null && option['type'] != null) {
+          label = '${option['name']} - ${option['type']}';
+        } else if (option['label'] != null) {
+          label = option['label'].toString();
+        } else if (option['name'] != null) {
+          label = option['name'].toString();
+        } else {
+          label = 'Item $id';
+        }
+        selectedLabels.add(label);
       }
     }
 
     return DropdownSearch<String>.multiSelection(
       items: (filter, infiniteScrollProps) {
-        return options.map((o) => '${o['name']} - ${o['type']}').toList();
+        return options.map((o) {
+          // Try different label formats for display
+          if (o['name'] != null && o['type'] != null) {
+            return '${o['name']} - ${o['type']}';
+          } else if (o['label'] != null) {
+            return o['label'].toString();
+          } else if (o['name'] != null) {
+            return o['name'].toString();
+          } else {
+            return 'Item ${o['id']}';
+          }
+        }).toList();
       },
       decoratorProps: DropDownDecoratorProps(
         decoration: _decoration.copyWith(labelText: 'Council Adjustments'),
@@ -725,11 +884,28 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         setState(() {
           _selectedCouncilAdjustments.clear();
           for (final label in selectedLabels) {
-            final option = options.firstWhereOrNull(
-              (o) => '${o['name']} - ${o['type']}' == label,
-            );
+            final option = options.firstWhereOrNull((o) {
+              // Match against different label formats
+              if (o['name'] != null && o['type'] != null) {
+                return '${o['name']} - ${o['type']}' == label;
+              } else if (o['label'] != null) {
+                return o['label'].toString() == label;
+              } else if (o['name'] != null) {
+                return o['name'].toString() == label;
+              } else {
+                return 'Item ${o['id']}' == label;
+              }
+            });
             if (option != null) {
-              _selectedCouncilAdjustments.add(option['id'] as int);
+              final dynamic val = option['id'];
+              if (val is int) {
+                _selectedCouncilAdjustments.add(val);
+              } else if (val is String) {
+                final int? parsed = int.tryParse(val);
+                if (parsed != null) {
+                  _selectedCouncilAdjustments.add(parsed);
+                }
+              }
             }
           }
         });
@@ -737,7 +913,7 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     );
   }
 
-  Widget _buildSingleSelectDropdown(
+  Widget _buildSingleSelectDropdownWithLabel(
     String dataKey,
     String label,
     String? value,
@@ -758,18 +934,19 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     // Convert value to string for comparison
     final String? valueStr = value?.toString();
 
-    // Only set value if it exists in deduplicated options and options are not empty
-    final String? validValue =
-        (valueStr != null &&
-            valueStr.isNotEmpty &&
-            uniqueOptionsMap.containsKey(valueStr))
-        ? valueStr
-        : null;
+    // Find the label for the current value
+    String? selectedLabel;
+    if (valueStr != null && valueStr.isNotEmpty) {
+      final option = uniqueOptionsMap[valueStr];
+      if (option != null) {
+        selectedLabel = option['label']?.toString();
+      }
+    }
 
     return DropdownSearch<String>(
       items: (filter, infiniteScrollProps) {
         if (options.isEmpty) return [];
-        return options.map((o) => (o['id'] ?? o['value']).toString()).toList();
+        return options.map((o) => o['label']?.toString() ?? 'Item').toList();
       },
       decoratorProps: DropDownDecoratorProps(
         decoration: _decoration.copyWith(
@@ -786,13 +963,9 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
           ),
         ),
         itemBuilder: (context, item, isDisabled, isSelected) {
-          final option = options.firstWhere(
-            (o) => (o['id'] ?? o['value']).toString() == item,
-            orElse: () => {'label': item},
-          );
           return ListTile(
             title: Text(
-              option['label']?.toString() ?? 'Item',
+              item,
               style: TextStyle(
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
@@ -802,9 +975,23 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
         },
       ),
       enabled: options.isNotEmpty,
-      selectedItem: options.isEmpty ? null : validValue,
+      selectedItem: selectedLabel,
       compareFn: (item1, item2) => item1 == item2,
-      onChanged: options.isEmpty ? null : onChanged,
+      onChanged: options.isEmpty
+          ? null
+          : (selectedLabel) {
+              // Convert label back to ID
+              if (selectedLabel == null) {
+                onChanged(null);
+                return;
+              }
+              final option = options.firstWhereOrNull(
+                (o) => o['label']?.toString() == selectedLabel,
+              );
+              if (option != null) {
+                onChanged((option['id'] ?? option['value']).toString());
+              }
+            },
     );
   }
 
@@ -834,41 +1021,6 @@ class _EditAssessmentViewState extends State<EditAssessmentView> {
     isDense: true,
     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
   );
-}
-
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.children});
-  final String title;
-  final List<Widget> children;
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.withOpacity(0.25)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [...children]),
-        ),
-      ],
-    );
-  }
 }
 
 class _AssessmentImageBox extends StatelessWidget {
