@@ -1,10 +1,7 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:dropdown_search/dropdown_search.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
@@ -24,7 +21,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   final _formKey = GlobalKey<FormState>();
   final _propertyService = PropertyService();
   String _isOrganization = '0';
-  String _inaccessibleProperty = '0';
 
   // Form controllers
   final Map<String, TextEditingController> _controllers = {};
@@ -42,10 +38,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
   Map<String, dynamic> _wardFilteredData = {};
   bool _loadingVars = false;
   bool _isSubmitting = false;
-  String? _propertyInaccessible;
-  String? _propertyInaccessibleImagePath;
-  String? _inaccessibleLat;
-  String? _inaccessibleLng;
 
   Map<String, dynamic> get _landlord => Map<String, dynamic>.from(
     (widget.property['landlord'] ?? {}) as Map? ?? {},
@@ -58,12 +50,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
         (widget.property['is_organization'] == true ||
             widget.property['is_organization'] == 1 ||
             widget.property['is_organization'] == '1')
-        ? '1'
-        : '0';
-    _inaccessibleProperty =
-        (widget.property['inaccessible_property'] == true ||
-            widget.property['inaccessible_property'] == 1 ||
-            widget.property['inaccessible_property'] == '1')
         ? '1'
         : '0';
     _initializeForm();
@@ -81,19 +67,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     _chiefdom = _landlord['chiefdom']?.toString();
     _district = _landlord['district']?.toString();
     _province = _landlord['province']?.toString();
-
-    // Initialize property inaccessible from property data
-    final dynamic inaccessibleRaw = widget.property['property_inaccessible'];
-    if (inaccessibleRaw is List && inaccessibleRaw.isNotEmpty) {
-      final firstItem = inaccessibleRaw.first;
-      if (firstItem is Map) {
-        _propertyInaccessible = firstItem['id']?.toString();
-      } else if (firstItem is String || firstItem is int) {
-        _propertyInaccessible = firstItem.toString();
-      }
-    } else if (inaccessibleRaw is String && inaccessibleRaw.isNotEmpty) {
-      _propertyInaccessible = inaccessibleRaw;
-    }
 
     _controllers['first_name'] = TextEditingController(
       text: _landlord['first_name']?.toString() ?? '',
@@ -226,14 +199,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
         'mobile_1': _controllers['mobile_1']!.text.trim(),
         'mobile_2': _controllers['mobile_2']!.text.trim(),
         'is_organization': _isOrganization,
-        'inaccessible_property': _inaccessibleProperty,
-        'property_inaccessable':
-            (_propertyInaccessible == null || _propertyInaccessible!.isEmpty)
-            ? []
-            : _propertyInaccessible,
-        'property_inaccessible_image': _propertyInaccessibleImagePath,
-        'inaccessible_lat': _inaccessibleLat,
-        'inaccessible_lng': _inaccessibleLng,
         'organization_name': _controllers['organization_name']!.text.trim(),
         'organization_type': _controllers['organization_type']!.text.trim(),
         'organization_addresss': _controllers['organization_addresss']!.text
@@ -270,29 +235,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Checkboxes
-              Row(
-                children: [
-                  SizedBox(
-                    height: 24,
-                    width: 24,
-                    child: Checkbox(
-                      value: _inaccessibleProperty == '1',
-                      onChanged: (v) => setState(
-                        () => _inaccessibleProperty = v == true ? '1' : '0',
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Inaccessible Property',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
               Row(
                 children: [
                   SizedBox(
@@ -627,96 +569,6 @@ class _EditLandlordViewState extends State<EditLandlordView> {
 
               const SizedBox(height: 16),
 
-              // Inaccessible Property Checkbox
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'Inaccessible Property',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                value: _inaccessibleProperty == '1',
-                activeColor: Colors.green,
-                controlAffinity: ListTileControlAffinity.leading,
-                onChanged: (bool? v) {
-                  setState(() {
-                    _inaccessibleProperty = v == true ? '1' : '0';
-                    if (v != true) {
-                      _propertyInaccessible = null;
-                      _propertyInaccessibleImagePath = null;
-                      _inaccessibleLat = null;
-                      _inaccessibleLng = null;
-                    } else {
-                      _getCurrentLocation();
-                    }
-                  });
-                },
-              ),
-
-              // Conditional fields
-              if (_inaccessibleProperty == '1') ...[
-                const SizedBox(height: 12),
-                _buildSingleSelectDropdown(
-                  'property_inaccessibles',
-                  'Property Inaccessible*',
-                  _propertyInaccessible,
-                  (v) => setState(() => _propertyInaccessible = v),
-                ),
-                const SizedBox(height: 12),
-
-                // Location Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        key: ValueKey('lat_$_inaccessibleLat'),
-                        initialValue: _inaccessibleLat,
-                        readOnly: true,
-                        decoration: _decoration.copyWith(
-                          labelText: 'Latitude',
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        key: ValueKey('lng_$_inaccessibleLng'),
-                        initialValue: _inaccessibleLng,
-                        readOnly: true,
-                        decoration: _decoration.copyWith(
-                          labelText: 'Longitude',
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _getCurrentLocation,
-                      icon: const Icon(Icons.location_on, color: Colors.blue),
-                      tooltip: 'Get Current Location',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                _ImageInputBox(
-                  label: 'Property Image',
-                  path: _propertyInaccessibleImagePath,
-                  onPick: () => _pickInaccessibleImage(),
-                  onRemove: () =>
-                      setState(() => _propertyInaccessibleImagePath = null),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              const SizedBox(height: 16),
-
               // Address Part 2
               /*
               TextFormField(
@@ -897,234 +749,4 @@ class _EditLandlordViewState extends State<EditLandlordView> {
     isDense: true,
     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
   );
-
-  Widget _buildSingleSelectDropdown(
-    String dataKey,
-    String label,
-    String? value,
-    Function(String?) onChanged,
-  ) {
-    final List<Map<String, dynamic>> rawOptions = _getOptions(dataKey);
-
-    // Deduplicate options by ID
-    final Map<String, Map<String, dynamic>> uniqueOptionsMap = {};
-    for (final Map<String, dynamic> o in rawOptions) {
-      final String id = (o['id'] ?? o['value']).toString();
-      if (id.isNotEmpty && !uniqueOptionsMap.containsKey(id)) {
-        uniqueOptionsMap[id] = o;
-      }
-    }
-    final List<Map<String, dynamic>> options = uniqueOptionsMap.values.toList();
-
-    // Find the label for the selected ID
-    String? selectedLabel;
-    if (value != null && value.isNotEmpty) {
-      final selectedOption = options.cast<Map<String, dynamic>?>().firstWhere(
-        (o) => o != null && (o['id'] ?? o['value']).toString() == value,
-        orElse: () => null,
-      );
-      if (selectedOption != null) {
-        selectedLabel = selectedOption['label']?.toString();
-      }
-    }
-
-    return DropdownSearch<String>(
-      items: (filter, infiniteScrollProps) {
-        if (options.isEmpty) return [];
-        // Return labels for display
-        return options.map((o) => o['label']?.toString() ?? 'Item').toList();
-      },
-      decoratorProps: DropDownDecoratorProps(
-        decoration: _decoration.copyWith(
-          labelText: label,
-          hintText: options.isEmpty ? 'Loading...' : null,
-        ),
-      ),
-      popupProps: PopupProps.menu(
-        showSearchBox: true,
-        searchFieldProps: const TextFieldProps(
-          decoration: InputDecoration(
-            hintText: 'Search...',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        itemBuilder: (context, item, isDisabled, isSelected) {
-          return ListTile(
-            title: Text(
-              item,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-            selected: isSelected,
-          );
-        },
-      ),
-      enabled: options.isNotEmpty,
-      selectedItem: options.isEmpty ? null : selectedLabel,
-      compareFn: (item1, item2) => item1 == item2,
-      onChanged: options.isEmpty
-          ? null
-          : (selectedLabel) {
-              if (selectedLabel != null) {
-                // Find the ID for the selected label
-                final selectedOption = options
-                    .cast<Map<String, dynamic>?>()
-                    .firstWhere(
-                      (o) =>
-                          o != null && o['label']?.toString() == selectedLabel,
-                      orElse: () => null,
-                    );
-                if (selectedOption != null) {
-                  final id = (selectedOption['id'] ?? selectedOption['value'])
-                      .toString();
-                  onChanged(id);
-                }
-              }
-            },
-    );
-  }
-
-  List<Map<String, dynamic>> _getOptions(String dataKey) {
-    if (_variables == null) return const [];
-    final data = _variables!['data'] as Map<String, dynamic>?;
-    if (data == null) return const [];
-
-    final raw = data[dataKey];
-    if (raw is List) {
-      return raw
-          .whereType<Map>()
-          .map((e) => Map<String, dynamic>.from(e))
-          .toList();
-    }
-    return const [];
-  }
-
-  Future<void> _pickInaccessibleImage() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? file = await picker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 75,
-    );
-    if (file != null) {
-      setState(() {
-        _propertyInaccessibleImagePath = file.path;
-      });
-    }
-  }
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled;
-      LocationPermission permission;
-
-      serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        ToastService.showError('Location services are disabled.');
-        return;
-      }
-
-      permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          ToastService.showError('Location permissions are denied');
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        ToastService.showError(
-          'Location permissions are permanently denied, we cannot request permissions.',
-        );
-        return;
-      }
-
-      final Position position = await Geolocator.getCurrentPosition();
-      setState(() {
-        _inaccessibleLat = position.latitude.toString();
-        _inaccessibleLng = position.longitude.toString();
-      });
-    } catch (e) {
-      Get.log('Error getting location: $e');
-      ToastService.showError('Failed to get location: $e');
-    }
-  }
-}
-
-class _ImageInputBox extends StatelessWidget {
-  const _ImageInputBox({
-    required this.label,
-    this.path,
-    required this.onPick,
-    required this.onRemove,
-  });
-
-  final String label;
-  final String? path;
-  final VoidCallback onPick;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool hasImage = path != null && path!.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        ),
-        const SizedBox(height: 8),
-        if (hasImage)
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.file(
-                  File(path!),
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  style: IconButton.styleFrom(backgroundColor: Colors.white),
-                  onPressed: onRemove,
-                ),
-              ),
-            ],
-          )
-        else
-          InkWell(
-            onTap: onPick,
-            child: Container(
-              height: 120,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.green, width: 2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.camera_alt, size: 40, color: Colors.green),
-                    SizedBox(height: 8),
-                    Text(
-                      'Tap to capture image',
-                      style: TextStyle(color: Colors.green),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
 }

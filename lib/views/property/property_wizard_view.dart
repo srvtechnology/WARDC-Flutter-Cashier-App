@@ -2049,16 +2049,7 @@ class _StepForms extends StatelessWidget {
             );
           }),
 
-          /* Commented out fields as per design
-          const SizedBox(height: 16),
-          _SingleSelectVariablesDropdown(
-            controller: controller,
-            dataKey: 'property_window_types',
-            payloadKey: 'assessment_window_type_id',
-            label: 'Window Type',
-          ),
-          
-          // Additional Information section
+          // Additional Information section - Conditional fields based on Value Added selection
           Obx(() {
             final dynamic selectedValueAdded =
                 controller.payload['assessment_value_added_id'];
@@ -2154,13 +2145,9 @@ class _StepForms extends StatelessWidget {
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                ...conditionalFields,
-              ],
+              children: [const SizedBox(height: 16), ...conditionalFields],
             );
           }),
-          */
           const SizedBox(height: 16),
           // Property Images
           Obx(() {

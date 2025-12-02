@@ -942,8 +942,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 _KV('Middle Name', _formValue('landlord_middle_name')),
                 _KV('Surname', _formValue('landlord_surname')),
                 _KV('Gender', _formValue('landlord_sex')),
-                _KV('Id type', _formValue('landlord_id_type')),
-                _KV('Id number', _formValue('landlord_id_number')),
               ],
             ),
             const SizedBox(height: 16),
@@ -961,7 +959,6 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               children: [
                 _KV('Street No', _formValue('landlord_street_number')),
                 _KV('Street Name', _formValue('landlord_street_name')),
-                _KV('Postcode', _formValue('landlord_postcode')),
                 _KV('Ward', _formValue('landlord_ward')),
                 _KV('Constituency', _formValue('landlord_constituency')),
                 _KV('Section', _formValue('landlord_section')),
@@ -989,70 +986,20 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             ),
             const SizedBox(height: 16),
             _SectionCard(
-              title: 'Delivery',
-              children: [
-                // Delivery Proof Image with actual image display
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 160,
-                        child: Text(
-                          'Delivery Proof Image',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildImageDisplay(
-                          _formValue('delivered_image'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _KV(
-                  'Is Draft Delivered?',
-                  _formValue('is_draft_delivered') == '1' ? 'Yes' : 'No',
-                ),
-                _KV('Recipient Name', _formValue('delivered_name')),
-                _KV('Recipient Number', _formValue('delivered_number')),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
               title: 'Address',
               children: [
-                _KV('Street Number', _formValue('property_street_number')),
+                _KV('Old Street Number', _formValue('property_street_number')),
                 _KV(
-                  'Street Number (New)',
+                  'New Street Number',
                   _formValue('property_street_numbernew'),
                 ),
                 _KV('Street Name', _formValue('property_street_name')),
-                _KV('Postcode', _formValue('property_postcode')),
                 _KV('Ward', _formValue('property_ward')),
                 _KV('Constituency', _formValue('property_constituency')),
                 _KV('Section', _formValue('property_section')),
                 _KV('Chiefdom', _formValue('property_chiefdom')),
                 _KV('District', _formValue('property_district')),
                 _KV('Province', _formValue('property_province')),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _SectionCard(
-              title: 'Other',
-              children: [
-                _KV('Property Inaccessible', () {
-                  final List<String> ids = _propertyInaccessible
-                      .whereType<Map>()
-                      .map((e) => e['id'])
-                      .where((e) => e != null)
-                      .map((e) => e.toString())
-                      .toList();
-                  return _labelsFor('property_inaccessibles', ids);
-                }()),
               ],
             ),
           ],
@@ -1407,18 +1354,28 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                   'Roof Material',
                   _formValue('assessment_roofs_materials_id'),
                 ),
-                _KV('Window Type', _formValue('assessment_window_type_id')),
                 _KV('Length', _formValue('assessment_length')),
                 _KV('Breadth', _formValue('assessment_breadth')),
                 _KV('Value Added', valueAddedLabels),
-                _KV('Property Use', _formValue('assessment_use_id')),
-                _KV('Property Zone', _formValue('assessment_zone_id')),
-                _KV('No of Masts', _formValue('total_mast')),
-                _KV('No of Shops', _formValue('total_shops')),
-                _KV('No of Compound House', _formValue('total_compound_house')),
-                _KV('Compound Name', _formValue('compound_name')),
-                _KV('Gated Community', _formValue('gated_community')),
                 _KV('Swimming Pool', _formValue('swimming_pool')),
+                _KV('Property Use', _formValue('assessment_use_id')),
+                _KV('Zones', _formValue('assessment_zone_id')),
+                _KV('Gated Community', _formValue('gated_community')),
+                // Conditional fields based on Value Added selection
+                if (_assessmentIds('assessment_value_added_id').contains('8') ||
+                    _assessmentIds('assessment_value_added_id').contains(8))
+                  _KV('No of Masts', _formValue('total_mast')),
+                if (_assessmentIds('assessment_value_added_id').contains('9') ||
+                    _assessmentIds('assessment_value_added_id').contains(9))
+                  _KV('No of Shops', _formValue('total_shops')),
+                if (_formValue('gated_community') == 'Yes' ||
+                    _formValue('gated_community') == '1') ...[
+                  _KV(
+                    'No of Compound House',
+                    _formValue('total_compound_house'),
+                  ),
+                  _KV('Compound Name', _formValue('compound_name')),
+                ],
                 // Extra financials for quick context
                 _KV('Mill rate', _text(_assessmentsObject['mill_rate'])),
                 _KV(
@@ -1451,7 +1408,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                       SizedBox(
                         width: 160,
                         child: Text(
-                          'Assessment Image 1',
+                          'Image 1',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -1474,7 +1431,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                       SizedBox(
                         width: 160,
                         child: Text(
-                          'Assessment Image 2',
+                          'Image 2',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
