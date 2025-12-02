@@ -8,6 +8,7 @@ import '../../services/property_service.dart';
 import '../../routes/app_pages.dart';
 import '../../services/toast_service.dart';
 import '../../utils/api_config.dart';
+import '../../widgets/section_card.dart';
 
 class PropertyDetailsView extends StatefulWidget {
   const PropertyDetailsView({
@@ -924,7 +925,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
+            SectionCard(
               title: 'Type',
               children: [
                 _KV(
@@ -934,7 +935,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ],
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            SectionCard(
               title: 'Personal Information',
               children: [
                 _KV('Title', _formValue('landlord_ownerTitle_id')),
@@ -945,7 +946,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ],
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            SectionCard(
               title: 'Contact',
               children: [
                 _KV('Email Address', _formValue('landlord_email')),
@@ -954,7 +955,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ],
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            SectionCard(
               title: 'Address',
               children: [
                 _KV('Street No', _formValue('landlord_street_number')),
@@ -973,7 +974,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
+            SectionCard(
               title: 'Category Type',
               children: [
                 _KV(
@@ -985,7 +986,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ],
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            SectionCard(
               title: 'Address',
               children: [
                 _KV('Old Street Number', _formValue('property_street_number')),
@@ -1019,7 +1020,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
+            SectionCard(
               title: 'Occupancy Types',
               children: [
                 // Enhanced Selected Types with chips
@@ -1086,7 +1087,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
+            SectionCard(
               title: 'Digital Address',
               children: [
                 _KV('Digital Address', _formValue('registry_digital_address')),
@@ -1095,7 +1096,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ],
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            SectionCard(
               title: 'Registry Points',
               children: [
                 GridView.builder(
@@ -1227,7 +1228,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
             ),
             if (_registryMeters.isNotEmpty) ...[
               const SizedBox(height: 16),
-              _SectionCard(
+              SectionCard(
                 title: 'Meters',
                 children: [
                   Column(
@@ -1325,7 +1326,7 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           fallbackIdsKey: 'property_types',
           fallbackVariablesKey: 'property_types',
         );
-        final String valueAddedLabels = _labelsFromListOrIds(
+        final List<String> valueAddedLabels = _listLabelsFromListOrIds(
           listKey: 'values_added',
           preferredKeys: const [
             'label',
@@ -1338,10 +1339,42 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
           fallbackVariablesKey: 'property_value_added',
         );
 
+        final List<String> councilAdjustmentLabels = _listLabelsFromListOrIds(
+          listKey: 'council_adjustments',
+          preferredKeys: const ['label', 'name', 'title', 'type', 'value'],
+          fallbackIdsKey: 'newAdjustmentIds',
+          fallbackVariablesKey: 'council_adjustments',
+        );
+
+        Widget buildChips(List<String> labels) {
+          if (labels.isEmpty) return const Text('—');
+          return Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: labels.map((label) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SectionCard(
+            SectionCard(
               title: 'Summary',
               children: [
                 _KV('Property Categories', categoryLabels),
@@ -1356,7 +1389,12 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
                 ),
                 _KV('Length', _formValue('assessment_length')),
                 _KV('Breadth', _formValue('assessment_breadth')),
-                _KV('Value Added', valueAddedLabels),
+                _KVWidget('Value Added', buildChips(valueAddedLabels)),
+                if (councilAdjustmentLabels.isNotEmpty)
+                  _KVWidget(
+                    'Council Adjustments',
+                    buildChips(councilAdjustmentLabels),
+                  ),
                 _KV('Swimming Pool', _formValue('swimming_pool')),
                 _KV('Property Use', _formValue('assessment_use_id')),
                 _KV('Zones', _formValue('assessment_zone_id')),
@@ -1396,59 +1434,82 @@ class _PropertyDetailsViewState extends State<PropertyDetailsView> {
               ],
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            SectionCard(
               title: 'Property Images',
               children: [
-                // Assessment Image 1
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 160,
-                        child: Text(
-                          'Image 1',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Image 1',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildImageDisplay(_formValue('assessment_images_1')),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildImageDisplay(
-                          _formValue('assessment_images_1'),
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Image 2',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          _buildImageDisplay(_formValue('assessment_images_2')),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Assessment Image 2
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 160,
-                        child: Text(
-                          'Image 2',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildImageDisplay(
-                          _formValue('assessment_images_2'),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
         );
     }
+  }
+
+  List<String> _getLabelsList(String key, List<String> preferredKeys) {
+    final List<Map<String, dynamic>> items = _assessmentList(key);
+    if (items.isEmpty) return [];
+    return items
+        .map((item) => _labelFromItem(item, preferredKeys))
+        .where((label) => label.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _listLabelsFor(String dataKey, List<dynamic> ids) {
+    if (ids.isEmpty) return [];
+    final List<String> out = <String>[];
+    for (final dynamic v in ids) {
+      out.add(_labelFor(dataKey, v));
+    }
+    return out;
+  }
+
+  List<String> _listLabelsFromListOrIds({
+    required String listKey,
+    required List<String> preferredKeys,
+    String? fallbackIdsKey,
+    String? fallbackVariablesKey,
+  }) {
+    final List<String> labels = _getLabelsList(listKey, preferredKeys);
+    if (labels.isNotEmpty) return labels;
+
+    if (fallbackIdsKey != null && fallbackVariablesKey != null) {
+      final List<dynamic> ids = _assessmentIds(fallbackIdsKey);
+      if (ids.isNotEmpty) {
+        return _listLabelsFor(fallbackVariablesKey, ids);
+      }
+    }
+
+    return [];
   }
 }
 
@@ -1477,37 +1538,25 @@ class _KV extends StatelessWidget {
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.children});
-  final String title;
-  final List<Widget> children;
+class _KVWidget extends StatelessWidget {
+  const _KVWidget(this.k, this.v);
+  final String k;
+  final Widget v;
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.withOpacity(0.25)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 160,
+            child: Text(k, style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
-          padding: const EdgeInsets.all(12),
-          child: Column(children: [...children]),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(child: v),
+        ],
+      ),
     );
   }
 }
@@ -1519,114 +1568,83 @@ class _HeaderStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(labels.length * 2 - 1, (i) {
+              // Connector Line
               if (i.isOdd) {
-                return Expanded(child: Container());
-              }
-              final int step = i ~/ 2;
-              final bool isAbove = step.isOdd;
-              if (!isAbove) {
-                return const SizedBox(width: 32);
-              }
-              final bool isActive = step == currentIndex;
-              return Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 5),
-                  child: FittedBox(
-                    fit: BoxFit.cover,
-                    child: Text(
-                      labels[step],
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isActive ? Colors.green : Colors.black87,
-                        fontWeight: isActive
-                            ? FontWeight.w600
-                            : FontWeight.w500,
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: List.generate(labels.length * 2 - 1, (i) {
-              if (i.isOdd) {
-                final int left = (i - 1) ~/ 2;
-                final bool active = left < currentIndex;
+                final int stepIndex = (i - 1) ~/ 2;
+                final bool isCompleted = stepIndex < currentIndex;
                 return Expanded(
                   child: Container(
-                    height: 3,
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    decoration: BoxDecoration(
-                      color: active ? Colors.green : Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(1.5),
-                    ),
+                    height: 4,
+                    color: isCompleted ? Colors.green : Colors.grey.shade200,
                   ),
                 );
               }
+
+              // Step Circle
               final int step = i ~/ 2;
-              final bool isDone = step <= currentIndex;
-              return Container(
-                width: 32,
-                height: 32,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isDone ? Colors.green : Colors.white,
-                  border: Border.all(
-                    color: isDone ? Colors.green : Colors.grey.shade400,
-                    width: 2,
+              final bool isCompleted = step < currentIndex;
+              final bool isActive = step == currentIndex;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCompleted
+                          ? Colors.green
+                          : (isActive ? Colors.white : Colors.grey.shade200),
+                      border: Border.all(
+                        color: isCompleted || isActive
+                            ? Colors.green
+                            : Colors.grey.shade200,
+                        width: 2,
+                      ),
+                    ),
+                    child: isCompleted
+                        ? const Icon(Icons.check, color: Colors.white, size: 20)
+                        : Text(
+                            '${step + 1}',
+                            style: TextStyle(
+                              color: isActive
+                                  ? Colors.green
+                                  : Colors.grey.shade600,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                   ),
-                ),
-                child: Text(
-                  '${step + 1}',
-                  style: TextStyle(
-                    color: isDone ? Colors.white : Colors.grey[800],
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
+                ],
               );
             }),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+          // Labels Row
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(labels.length * 2 - 1, (i) {
-              if (i.isOdd) {
-                return Expanded(child: Container());
-              }
-              final int step = i ~/ 2;
-              final bool isBelow = step.isEven;
-              if (!isBelow) {
-                return const SizedBox(width: 32);
-              }
-              final bool isActive = step == currentIndex;
+            children: List.generate(labels.length, (index) {
+              final bool isActive = index == currentIndex;
+              final bool isCompleted = index < currentIndex;
               return Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    labels[step],
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: isActive ? Colors.green : Colors.black87,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                      height: 1.2,
-                    ),
+                child: Text(
+                  labels[index],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isActive || isCompleted
+                        ? (isActive ? Colors.green : Colors.grey.shade700)
+                        : Colors.grey.shade400,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
               );

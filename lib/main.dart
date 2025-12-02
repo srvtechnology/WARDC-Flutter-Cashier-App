@@ -10,7 +10,7 @@ void main() {
   // Configure API environment
   // Set to Environment.development for dev, Environment.production for prod
   // Default is production (https://wardc.srvtechnology.com/public/api/)
-  ApiConfig.setEnvironment(Environment.development);
+  ApiConfig.setEnvironment(Environment.production);
   runApp(const MyApp());
 }
 
@@ -33,8 +33,8 @@ class MyApp extends StatelessWidget {
       getPages: AppPages.routes,
 
       // GetX Configuration
-      defaultTransition: Transition.fade,
-      transitionDuration: const Duration(milliseconds: 300),
+      defaultTransition: Transition.rightToLeftWithFade,
+      transitionDuration: const Duration(milliseconds: 400),
 
       // Global Configuration
       locale: const Locale(
