@@ -12,7 +12,6 @@ class AuthController extends GetxController {
 
   final RxBool isLoading = false.obs;
   final RxBool obscurePassword = true.obs;
-  final RxInt selectedTabIndex = 0.obs; // 0: Assessment, 1: Cashier
 
   final AuthService _authService = AuthService();
 
@@ -34,24 +33,21 @@ class AuthController extends GetxController {
 
     isLoading.value = true;
     try {
-      final UserType type =
-          selectedTabIndex.value == 0 ? UserType.assessmentOfficer : UserType.cashier;
+      const UserType type = UserType.assessmentOfficer;
       await _authService.login(
         email: emailController.text.trim(),
         password: passwordController.text,
         type: type,
       );
 
-      // Navigate based on role
-      if (type == UserType.assessmentOfficer) {
-        Get.offAllNamed(Routes.assessmentDashboard);
-      } else {
-        Get.offAllNamed(Routes.cashierDashboard);
-      }
+      Get.offAllNamed(Routes.assessmentDashboard);
     } on AuthException catch (e) {
       ToastService.showError(e.message, title: 'Login failed');
     } catch (e) {
-      ToastService.showError('Unexpected error occurred', title: 'Login failed');
+      ToastService.showError(
+        'Unexpected error occurred',
+        title: 'Login failed',
+      );
     } finally {
       isLoading.value = false;
     }
@@ -68,5 +64,3 @@ class AuthController extends GetxController {
     super.onClose();
   }
 }
-
-

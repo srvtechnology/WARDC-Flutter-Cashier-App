@@ -45,100 +45,92 @@ class OnboardingView extends GetView<OnboardingController> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
-                      DefaultTabController(
-                        length: 2,
-                        initialIndex: 0,
-                        child: Column(
-                          children: [
-                            TabBar(
-                              onTap: (int index) =>
-                                  auth.selectedTabIndex.value = index,
-                              indicatorColor: AppTheme.primaryGreen,
-                              labelColor: AppTheme.primaryGreen,
-                              unselectedLabelColor: Colors.black87,
-                              tabs: const [
-                                Tab(text: 'Assessment Officer Login'),
-                                Tab(text: 'Cashier Login'),
+                      Column(
+                        children: [
+                          Text(
+                            'Assessment Officer Login',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryGreen,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Form(
+                            key: auth.formKey,
+                            child: Column(
+                              children: [
+                                TextFormField(
+                                  controller: auth.emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email ID',
+                                    hintText: 'eg. johnex@gmail.com',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                  validator: auth.validateEmail,
+                                  autofillHints: const [AutofillHints.email],
+                                ),
+                                const SizedBox(height: 12),
+                                Obx(
+                                  () => TextFormField(
+                                    controller: auth.passwordController,
+                                    obscureText: auth.obscurePassword.value,
+                                    decoration: InputDecoration(
+                                      labelText: 'Password',
+                                      border: const OutlineInputBorder(),
+                                      suffixIcon: IconButton(
+                                        onPressed:
+                                            auth.togglePasswordVisibility,
+                                        icon: Icon(
+                                          auth.obscurePassword.value
+                                              ? Icons.visibility_off
+                                              : Icons.visibility,
+                                        ),
+                                      ),
+                                    ),
+                                    validator: auth.validatePassword,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                const SizedBox(height: 8),
+                                Obx(
+                                  () => SizedBox(
+                                    width: double.infinity,
+                                    height: 48,
+                                    child: ElevatedButton(
+                                      onPressed: auth.isLoading.value
+                                          ? null
+                                          : auth.submit,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryGreen,
+                                        foregroundColor: AppTheme.pureWhite,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                      child: auth.isLoading.value
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.4,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(Colors.white),
+                                              ),
+                                            )
+                                          : const Text('Submit'),
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 12),
-                            Form(
-                              key: auth.formKey,
-                              child: Column(
-                                children: [
-                                  TextFormField(
-                                    controller: auth.emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Email ID',
-                                      hintText: 'eg. johnex@gmail.com',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    validator: auth.validateEmail,
-                                    autofillHints: const [AutofillHints.email],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Obx(
-                                    () => TextFormField(
-                                      controller: auth.passwordController,
-                                      obscureText: auth.obscurePassword.value,
-                                      decoration: InputDecoration(
-                                        labelText: 'Password',
-                                        border: const OutlineInputBorder(),
-                                        suffixIcon: IconButton(
-                                          onPressed:
-                                              auth.togglePasswordVisibility,
-                                          icon: Icon(
-                                            auth.obscurePassword.value
-                                                ? Icons.visibility_off
-                                                : Icons.visibility,
-                                          ),
-                                        ),
-                                      ),
-                                      validator: auth.validatePassword,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const SizedBox(height: 8),
-                                  Obx(
-                                    () => SizedBox(
-                                      width: double.infinity,
-                                      height: 48,
-                                      child: ElevatedButton(
-                                        onPressed: auth.isLoading.value
-                                            ? null
-                                            : auth.submit,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              AppTheme.primaryGreen,
-                                          foregroundColor: AppTheme.pureWhite,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
-                                          ),
-                                        ),
-                                        child: auth.isLoading.value
-                                            ? const SizedBox(
-                                                width: 22,
-                                                height: 22,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2.4,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                        Color
-                                                      >(Colors.white),
-                                                ),
-                                              )
-                                            : const Text('Submit'),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -22,8 +22,6 @@ class OnboardingController extends GetxController {
     final UserType? type = await _auth.getSavedUserType();
     if (type == UserType.assessmentOfficer) {
       Get.offAllNamed(Routes.assessmentDashboard);
-    } else if (type == UserType.cashier) {
-      Get.offAllNamed(Routes.cashierDashboard);
     }
   }
 
@@ -31,4 +29,3 @@ class OnboardingController extends GetxController {
     showLogin.value = true;
   }
 }
-

@@ -6,7 +6,7 @@ import '../bindings/onboarding_binding.dart';
 import '../views/home/home_view.dart';
 import '../views/onboarding/onboarding_view.dart';
 import '../views/dashboard/assessment_dashboard_view.dart';
-import '../views/dashboard/cashier_dashboard_view.dart';
+
 import '../views/property/property_list_view.dart';
 import '../views/property/property_wizard_view.dart';
 import '../views/property/edit_landlord_view.dart';
@@ -40,14 +40,8 @@ class AppPages {
       name: Routes.assessmentDashboard,
       page: () => const AssessmentDashboardView(),
     ),
-    GetPage(
-      name: Routes.cashierDashboard,
-      page: () => const CashierDashboardView(),
-    ),
-    GetPage(
-      name: Routes.propertyList,
-      page: () => const PropertyListView(),
-    ),
+
+    GetPage(name: Routes.propertyList, page: () => const PropertyListView()),
     GetPage(
       name: Routes.propertyWizard,
       page: () => const PropertyWizardView(),
@@ -87,18 +81,11 @@ class AppPages {
         return EditAssessmentView(property: property);
       },
     ),
-    GetPage(
-      name: Routes.userProfile,
-      page: () => const UserProfileView(),
-    ),
+    GetPage(name: Routes.userProfile, page: () => const UserProfileView()),
     GetPage(
       name: Routes.propertySearch,
       page: () => const PropertySearchView(),
     ),
-    GetPage(
-      name: Routes.paymentSearch,
-      page: () => const PaymentSearchView(),
-    ),
+    GetPage(name: Routes.paymentSearch, page: () => const PaymentSearchView()),
   ];
 }
-

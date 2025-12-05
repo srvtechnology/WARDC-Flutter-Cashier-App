@@ -20,13 +20,13 @@ class ApiConfig {
   /// Base URLs for different environments
   static const String _devBaseUrl =
       'https://wardc.srvtechnology.com/public/api/';
-  static const String _prodBaseUrl = 'http://13.232.84.109/apis/api/';
+  static const String _prodBaseUrl = 'https://www.wardc.online/apis/api/';
 
   /// Storage URLs for different environments
   static const String _devStorageUrl =
       'https://wardc.srvtechnology.com/storage/app/public/';
   static const String _prodStorageUrl =
-      'http://13.232.84.109/apis/storage/app/public/';
+      'https://www.wardc.online/apis/storage/app/public/';
 
   /// Get base URL based on current environment
   static String get baseUrl {

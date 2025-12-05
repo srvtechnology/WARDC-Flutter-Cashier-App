@@ -9,7 +9,7 @@ abstract class Routes {
   static const onboarding = '/onboarding';
   static const home = '/home';
   static const assessmentDashboard = '/assessment-dashboard';
-  static const cashierDashboard = '/cashier-dashboard';
+
   static const propertyList = '/property-list';
   static const propertyWizard = '/property-wizard';
   static const editLandlord = '/edit-landlord';
@@ -21,4 +21,3 @@ abstract class Routes {
   static const propertySearch = '/property-search';
   static const paymentSearch = '/payment-search';
 }
-
