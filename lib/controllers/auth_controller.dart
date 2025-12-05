@@ -33,14 +33,14 @@ class AuthController extends GetxController {
 
     isLoading.value = true;
     try {
-      const UserType type = UserType.assessmentOfficer;
+      const UserType type = UserType.cashier;
       await _authService.login(
         email: emailController.text.trim(),
         password: passwordController.text,
         type: type,
       );
 
-      Get.offAllNamed(Routes.assessmentDashboard);
+      Get.offAllNamed(Routes.paymentSearch);
     } on AuthException catch (e) {
       ToastService.showError(e.message, title: 'Login failed');
     } catch (e) {

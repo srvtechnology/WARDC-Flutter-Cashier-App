@@ -1,4 +1,4 @@
-package com.example.western_area_rural_district_council
+package com.srvtech.wrad_cash
 
 import io.flutter.embedding.android.FlutterActivity
 

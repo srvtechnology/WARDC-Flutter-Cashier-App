@@ -48,7 +48,7 @@ class OnboardingView extends GetView<OnboardingController> {
                       Column(
                         children: [
                           Text(
-                            'Assessment Officer Login',
+                            'Cashier Login',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
