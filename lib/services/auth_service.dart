@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/api_config.dart';
+import '../utils/api_logger.dart';
 
 enum UserType { assessmentOfficer, cashier }
 
@@ -16,8 +17,11 @@ class AuthService {
           contentType: ApiConfig.contentType,
           connectTimeout: ApiConfig.timeout,
           receiveTimeout: ApiConfig.timeout,
+          sendTimeout: ApiConfig.timeout,
         ),
-      );
+      ) {
+    _dio.interceptors.add(ApiLoggerInterceptor());
+  }
 
   static final AuthService _instance = AuthService._internal();
 

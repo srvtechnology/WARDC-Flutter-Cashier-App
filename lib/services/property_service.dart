@@ -5,9 +5,13 @@ import 'package:dio/dio.dart' as dio;
 import 'package:get/get.dart' show Get;
 import '../services/auth_service.dart';
 import '../utils/api_config.dart';
+import '../utils/api_logger.dart';
 
 class PropertyService {
-  PropertyService._();
+  PropertyService._() {
+    _dio.interceptors.add(ApiLoggerInterceptor());
+    _updateDio.interceptors.add(ApiLoggerInterceptor());
+  }
   static final PropertyService _instance = PropertyService._();
   factory PropertyService() => _instance;
 
@@ -17,6 +21,7 @@ class PropertyService {
       contentType: ApiConfig.contentType,
       connectTimeout: ApiConfig.timeout,
       receiveTimeout: ApiConfig.timeout,
+      sendTimeout: ApiConfig.timeout,
     ),
   );
 
@@ -237,7 +242,7 @@ class PropertyService {
       if (value == null) return;
       if (value is List) {
         for (final v in value) {
-          formData.fields.add(MapEntry('${key}[]', v.toString()));
+          formData.fields.add(MapEntry('$key[]', v.toString()));
         }
       } else {
         formData.fields.add(MapEntry(key, value.toString()));
@@ -360,6 +365,7 @@ class PropertyService {
       contentType: ApiConfig.contentType,
       connectTimeout: ApiConfig.timeout,
       receiveTimeout: ApiConfig.timeout,
+      sendTimeout: ApiConfig.timeout,
     ),
   );
 
@@ -506,7 +512,7 @@ class PropertyService {
       if (value == null) return;
       if (value is List) {
         for (final v in value) {
-          formData.fields.add(MapEntry('${key}[]', v.toString()));
+          formData.fields.add(MapEntry('$key[]', v.toString()));
         }
       } else {
         formData.fields.add(MapEntry(key, value.toString()));

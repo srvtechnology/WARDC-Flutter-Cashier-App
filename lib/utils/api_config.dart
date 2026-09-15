@@ -67,8 +67,8 @@ class ApiConfig {
     return '$baseUrl/$cleanPath';
   }
 
-  /// API timeout duration
-  static const Duration timeout = Duration(seconds: 15);
+  /// API timeout duration (minimum 1 minute)
+  static const Duration timeout = Duration(minutes: 1);
 
   /// Content type for API requests
   static const String contentType = 'application/json';
